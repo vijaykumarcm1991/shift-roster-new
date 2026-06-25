@@ -1,5 +1,8 @@
 """Business-logic services.
 
-Phase 1 contains no business services — this package is a placeholder
-for future phases.
+Phase 2 keeps services thin — they own orchestration between
+repositories and schemas.
 """
+
+from app.services.shift_type import ShiftTypeService  # noqa: F401
+from app.services.team import TeamService  # noqa: F401

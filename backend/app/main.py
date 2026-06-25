@@ -15,6 +15,8 @@ from fastapi.templating import Jinja2Templates
 from app.api.v1.api import api_router
 from app.core.config import settings
 from app.core.logging import configure_logging, get_logger
+from app.db.seed import seed_shift_types
+from app.db.session import SessionLocal
 
 logger = get_logger(__name__)
 
@@ -32,6 +34,16 @@ async def lifespan(app: FastAPI):  # noqa: ARG001
     """Application startup / shutdown lifecycle."""
     logger.info("Starting %s (env=%s)", settings.app_name, settings.app_env)
     logger.info("Database: %s", settings.postgres_host)
+
+    # Seed default data (idempotent — safe on every start)
+    db = SessionLocal()
+    try:
+        seed_shift_types(db)
+    except Exception:
+        logger.warning("Seed data could not be applied (tables may not exist yet)")
+    finally:
+        db.close()
+
     yield
     logger.info("Shutting down %s", settings.app_name)
 

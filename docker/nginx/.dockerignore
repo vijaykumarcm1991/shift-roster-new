@@ -1,0 +1,33 @@
+# ===========================================================
+# .dockerignore — nginx image
+# The nginx build context is ./docker/nginx so only the
+# Dockerfile and config are relevant; exclude everything else.
+# ===========================================================
+
+# --- Version control ---
+.git/
+.gitignore
+
+# --- Everything in the repo root that nginx doesn't need ---
+# (build context is docker/nginx, so these are relative to that)
+*.md
+*.log
+*.db
+*.sqlite
+*.sqlite3
+.env
+.env.*
+
+# --- Python / backend (never needed by nginx image) ---
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+tests/
+
+# --- IDE ---
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store

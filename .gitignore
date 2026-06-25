@@ -1,52 +1,61 @@
-# Byte-compiled / optimized / DLL files
+# ===========================================================
+# .gitignore — Shift Roster
+# ===========================================================
+
+# --- Python bytecode & caches ---
 __pycache__/
 *.py[cod]
 *$py.class
 *.so
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
 
-# Virtual environments
+# --- Virtual environments ---
 .venv/
 venv/
 env/
 ENV/
 
-# Distribution / packaging
+# --- Distribution / packaging ---
 .Python
 build/
 dist/
 *.egg-info/
 *.egg
 
-# Environment
+# --- Environment / secrets ---
 .env
 .env.local
 .env.*.local
 
-# IDE
+# --- IDE / editor ---
 .idea/
 .vscode/
 *.swp
 *.swo
+*.sublime-*
 .DS_Store
 
-# Logs
+# --- Logs ---
 *.log
 logs/
 
-# Database
+# --- Local database files (dev / test) ---
 *.db
 *.sqlite
 *.sqlite3
 
-# Node / frontend tooling
+# --- Node / frontend tooling ---
 node_modules/
-dist/
+frontend/dist/
 .parcel-cache/
 
-# Docker
+# --- Docker volumes & state ---
 .docker/
+postgres_data/
 
-# Local configuration files
+# --- Project-local files (not for the repo) ---
 .kkey/
 Phase*
 build_start.sh

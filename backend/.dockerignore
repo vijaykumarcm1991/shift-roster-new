@@ -1,0 +1,77 @@
+# ===========================================================
+# .dockerignore — backend image
+# Everything below is excluded from the Docker build context
+# to keep the image small, secure, and fast to build.
+# ===========================================================
+
+# --- Version control ---
+.git/
+.gitignore
+
+# --- Python bytecode & caches ---
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# --- Virtual environments ---
+.venv/
+venv/
+env/
+ENV/
+
+# --- Tests (not needed in production image) ---
+tests/
+pytest.ini
+pyproject.toml
+setup.cfg
+setup.py
+tox.ini
+
+# --- IDE / editor ---
+.idea/
+.vscode/
+*.swp
+*.swo
+*.sublime-*
+.DS_Store
+
+# --- Environment / secrets ---
+.env
+.env.*
+!.env.example
+
+# --- Database files (local dev only) ---
+*.db
+*.sqlite
+*.sqlite3
+
+# --- Logs ---
+*.log
+logs/
+
+# --- Docker files (no recursion) ---
+docker-compose.yml
+docker-compose.*.yml
+.docker/
+Dockerfile
+*.dockerfile
+
+# --- Docs / meta ---
+README.md
+LICENSE
+CHANGELOG.md
+.gitattributes
+
+# --- Phase spec files (project root, but build context is backend/) ---
+Phase*
+build_start.sh
+git_add_commit_push.sh
+.kkey/
+
+# --- Frontend (served by nginx, not the backend) ---
+frontend/
+docker/
