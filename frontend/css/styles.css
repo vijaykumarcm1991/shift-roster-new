@@ -1,0 +1,45 @@
+/* ------------------------------------------------------------------
+   Shift Roster — custom styles
+   TailwindCSS handles the vast majority of styling. This file
+   contains only minor tweaks that are awkward to express inline.
+   ------------------------------------------------------------------ */
+
+html {
+  -webkit-text-size-adjust: 100%;
+  text-rendering: optimizeLegibility;
+}
+
+body {
+  font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+}
+
+/* Smooth theme switch — even on elements not covered by Tailwind. */
+*,
+*::before,
+*::after {
+  transition-property: background-color, border-color, color, fill, stroke;
+  transition-duration: 200ms;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Custom scrollbar (subtle, both modes) */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgb(148 163 184 / 0.5);
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgb(100 116 139 / 0.7);
+}
+.dark ::-webkit-scrollbar-thumb {
+  background: rgb(71 85 105 / 0.6);
+}
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: rgb(100 116 139 / 0.8);
+}
