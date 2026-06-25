@@ -11,3 +11,4 @@ from app.models.roster import Roster  # noqa: F401
 from app.models.setting import Setting  # noqa: F401
 from app.models.shift_type import ShiftType  # noqa: F401
 from app.models.team import Team  # noqa: F401
+from app.models.user import User  # noqa: F401

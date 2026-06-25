@@ -15,7 +15,7 @@ from fastapi.templating import Jinja2Templates
 from app.api.v1.api import api_router
 from app.core.config import settings
 from app.core.logging import configure_logging, get_logger
-from app.db.seed import seed_shift_types
+from app.db.seed import seed_admin_user, seed_shift_types
 from app.db.session import SessionLocal
 
 logger = get_logger(__name__)
@@ -39,6 +39,7 @@ async def lifespan(app: FastAPI):  # noqa: ARG001
     db = SessionLocal()
     try:
         seed_shift_types(db)
+        seed_admin_user(db)
     except Exception:
         logger.warning("Seed data could not be applied (tables may not exist yet)")
     finally:

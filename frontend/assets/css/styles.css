@@ -13,16 +13,21 @@ body {
   font-feature-settings: "cv02", "cv03", "cv04", "cv11";
 }
 
-/* Smooth theme switch — even on elements not covered by Tailwind. */
+/* Smooth theme switch */
 *,
 *::before,
 *::after {
-  transition-property: background-color, border-color, color, fill, stroke;
+  transition-property: background-color, border-color, color, fill, stroke, box-shadow, transform;
   transition-duration: 200ms;
   transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-/* Custom scrollbar (subtle, both modes) */
+/* Sidebar slide */
+.sidebar-slide {
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Custom scrollbar */
 ::-webkit-scrollbar {
   width: 10px;
   height: 10px;
@@ -42,4 +47,15 @@ body {
 }
 .dark ::-webkit-scrollbar-thumb:hover {
   background: rgb(100 116 139 / 0.8);
+}
+
+/* Sidebar menu item highlight */
+.nav-item {
+  transition: background-color 0.15s, color 0.15s, padding-left 0.15s;
+}
+.nav-item:hover {
+  padding-left: 1rem;
+}
+.nav-item.active {
+  padding-left: 1rem;
 }

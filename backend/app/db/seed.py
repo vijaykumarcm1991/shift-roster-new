@@ -12,7 +12,9 @@ from typing import List
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.core.security import hash_password
 from app.models.shift_type import ShiftType
+from app.models.user import User
 
 logger = logging.getLogger(__name__)
 
@@ -29,6 +31,10 @@ DEFAULT_SHIFT_TYPES: List[tuple[str, str, str, int]] = [
     ("L",  "Leave",       "red",     70),
     ("GH", "Gas Holiday", "yellow",  80),
 ]
+
+# Default admin account
+DEFAULT_ADMIN_USERNAME = "admin"
+DEFAULT_ADMIN_PASSWORD = "admin123"
 
 
 def seed_shift_types(db: Session) -> int:
@@ -61,3 +67,31 @@ def seed_shift_types(db: Session) -> int:
     else:
         logger.debug("Shift types already present, no seeding needed")
     return inserted
+
+
+def seed_admin_user(db: Session) -> int:
+    """Insert the default admin user if no admin exists.
+
+    Returns 1 if a user was inserted, 0 otherwise.
+    """
+    existing = db.execute(
+        select(User).where(User.username == DEFAULT_ADMIN_USERNAME)
+    ).scalars().first()
+
+    if existing is not None:
+        logger.debug("Admin user already exists, skipping seed")
+        return 0
+
+    db.add(
+        User(
+            username=DEFAULT_ADMIN_USERNAME,
+            full_name="Administrator",
+            email="admin@shiftroster.local",
+            password_hash=hash_password(DEFAULT_ADMIN_PASSWORD),
+            role="admin",
+            is_active=True,
+        )
+    )
+    db.commit()
+    logger.info("Seeded default admin user (username=%s)", DEFAULT_ADMIN_USERNAME)
+    return 1

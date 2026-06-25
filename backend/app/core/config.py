@@ -37,6 +37,10 @@ class Settings(BaseSettings):
     secret_key: str = Field(default="change-me")
     backend_cors_origins: List[str] = Field(default_factory=list)
 
+    # --- JWT ---
+    jwt_algorithm: str = Field(default="HS256")
+    jwt_access_token_expire_minutes: int = Field(default=480)  # 8 hours
+
     # --- Database ---
     postgres_user: str = Field(default="shiftroster")
     postgres_password: str = Field(default="shiftroster")
