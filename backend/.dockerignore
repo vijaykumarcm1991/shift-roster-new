@@ -71,6 +71,9 @@ Phase*
 build_start.sh
 git_add_commit_push.sh
 .kkey/
+agent_memory.jsonl
+ai_agent_config.json
+ai_agent_session.json
 
 # --- Frontend (served by nginx, not the backend) ---
 frontend/

@@ -60,3 +60,7 @@ postgres_data/
 Phase*
 build_start.sh
 git_add_commit_push.sh
+agent_memory.jsonl
+ai_agent_config.json
+ai_agent_session.json
+

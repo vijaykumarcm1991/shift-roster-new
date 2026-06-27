@@ -1,0 +1,133 @@
+"""Service for the Employee domain."""
+
+from __future__ import annotations
+
+import math
+from typing import Dict, Optional
+
+from sqlalchemy.orm import Session
+
+from app.models.employee import Employee
+from app.models.team import Team
+from app.repositories.employee import EmployeeRepository
+from app.schemas.employee import (
+    EmployeeCreate,
+    EmployeeRead,
+    EmployeeUpdate,
+    PaginatedResponse,
+)
+
+
+class EmployeeService:
+    """High-level operations on employees."""
+
+    def __init__(self, repository: EmployeeRepository) -> None:
+        self.repository = repository
+
+    def list_employees(
+        self,
+        page: int = 1,
+        page_size: int = 10,
+        search: Optional[str] = None,
+        team: Optional[int] = None,
+        status: Optional[str] = None,
+    ) -> PaginatedResponse:
+        """Return a paginated list of employees."""
+        page = max(1, page)
+        page_size = max(1, min(page_size, 100))
+
+        total = self.repository.count(search=search, team=team, status=status)
+        employees = self.repository.list_paginated(
+            page=page, page_size=page_size, search=search, team=team, status=status
+        )
+        total_pages = max(1, math.ceil(total / page_size))
+
+        return PaginatedResponse(
+            items=[self._to_read(e) for e in employees],
+            total=total,
+            page=page,
+            page_size=page_size,
+            total_pages=total_pages,
+        )
+
+    def get_employee(self, employee_id: int) -> Optional[EmployeeRead]:
+        """Return a single employee by id."""
+        emp = self.repository.get_by_id(employee_id)
+        if emp is None:
+            return None
+        return self._to_read(emp)
+
+    def create_employee(self, data: EmployeeCreate, db: Session) -> EmployeeRead:
+        """Create a new employee. Raises ValueError on duplicate code/email or bad team."""
+        # Duplicate code check
+        if self.repository.get_by_code(data.employee_code):
+            raise ValueError(f"Employee code '{data.employee_code}' already exists")
+
+        # Team existence check
+        if data.team_id is not None:
+            if db.get(Team, data.team_id) is None:
+                raise ValueError(f"Team id {data.team_id} does not exist")
+
+        emp = Employee(
+            employee_code=data.employee_code,
+            employee_name=data.employee_name,
+            email=data.email or None,
+            designation=data.designation or None,
+            team_id=data.team_id,
+            is_active=data.is_active,
+        )
+        emp = self.repository.create(emp)
+        db.commit()
+        return self._to_read(emp)
+
+    def update_employee(self, employee_id: int, data: EmployeeUpdate, db: Session) -> Optional[EmployeeRead]:
+        """Update an existing employee. Returns None if not found."""
+        emp = self.repository.get_by_id(employee_id)
+        if emp is None:
+            return None
+
+        update_data = data.model_dump(exclude_unset=True)
+
+        # Duplicate code check
+        if "employee_code" in update_data and update_data["employee_code"] != emp.employee_code:
+            if self.repository.get_by_code(update_data["employee_code"]):
+                raise ValueError(f"Employee code '{update_data['employee_code']}' already exists")
+
+        # Team existence check
+        if "team_id" in update_data and update_data["team_id"] is not None:
+            if db.get(Team, update_data["team_id"]) is None:
+                raise ValueError(f"Team id {update_data['team_id']} does not exist")
+
+        for field, value in update_data.items():
+            setattr(emp, field, value)
+
+        emp = self.repository.update(emp)
+        db.commit()
+        return self._to_read(emp)
+
+    def delete_employee(self, employee_id: int, db: Session) -> Optional[EmployeeRead]:
+        """Soft-delete: set is_active=False. Returns None if not found."""
+        emp = self.repository.get_by_id(employee_id)
+        if emp is None:
+            return None
+        emp.is_active = False
+        emp = self.repository.update(emp)
+        db.commit()
+        return self._to_read(emp)
+
+    # ---- internal ----
+
+    @staticmethod
+    def _to_read(emp: Employee) -> EmployeeRead:
+        return EmployeeRead(
+            id=emp.id,
+            employee_code=emp.employee_code,
+            employee_name=emp.employee_name,
+            email=emp.email,
+            designation=emp.designation,
+            team_id=emp.team_id,
+            team_name=emp.team.team_name if emp.team else None,
+            is_active=emp.is_active,
+            created_at=emp.created_at,
+            updated_at=emp.updated_at,
+        )
