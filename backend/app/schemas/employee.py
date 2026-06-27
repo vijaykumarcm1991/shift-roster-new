@@ -1,7 +1,7 @@
 """Pydantic schemas for Employee CRUD endpoints."""
 
 from datetime import datetime
-from typing import Optional
+from typing import List, Optional
 
 from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
 
@@ -81,9 +81,9 @@ class EmployeeRead(BaseModel):
 
 
 class PaginatedResponse(BaseModel):
-    """Generic paginated list wrapper."""
+    """Paginated list wrapper for Employee endpoints."""
 
-    items: list
+    items: List[EmployeeRead]
     total: int
     page: int
     page_size: int

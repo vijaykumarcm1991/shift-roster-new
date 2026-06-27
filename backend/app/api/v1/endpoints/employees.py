@@ -5,8 +5,6 @@ from __future__ import annotations
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from fastapi.exceptions import RequestValidationError
-from pydantic import ValidationError
 from sqlalchemy.orm import Session
 
 from app.api.deps import db_session
@@ -24,25 +22,12 @@ from app.services.employee import EmployeeService
 router = APIRouter(prefix="/employees", tags=["employees"])
 
 
-def _format_validation_error(exc: ValidationError) -> str:
-    """Convert a Pydantic ValidationError into a single human-readable string."""
-    errors = exc.errors()
-    if not errors:
-        return "Invalid input"
-    first = errors[0]
-    loc = ".".join(str(p) for p in first.get("loc", []) if p != "body")
-    msg = first.get("msg", "Invalid input")
-    if loc:
-        return f"{loc}: {msg}"
-    return msg
-
-
 @router.get("", response_model=PaginatedResponse)
 def list_employees(
     page: int = Query(default=1, ge=1),
     page_size: int = Query(default=10, ge=1, le=100),
     search: Optional[str] = Query(default=None, max_length=120),
-    team: Optional[int] = Query(default=None),
+    team_id: Optional[int] = Query(default=None),
     status: Optional[str] = Query(default=None, pattern="^(active|inactive)$"),
     db: Session = Depends(db_session),
     current_user: User = Depends(require_admin),
@@ -50,7 +35,7 @@ def list_employees(
     """Return a paginated, filterable list of employees."""
     service = EmployeeService(EmployeeRepository(db))
     return service.list_employees(
-        page=page, page_size=page_size, search=search, team=team, status=status
+        page=page, page_size=page_size, search=search, team=team_id, status=status
     )
 
 

@@ -2,6 +2,8 @@
 # .dockerignore — backend image
 # Everything below is excluded from the Docker build context
 # to keep the image small, secure, and fast to build.
+# NOTE: this file lives inside the build context (./backend),
+# so the Dockerfile at backend/Dockerfile MUST be included.
 # ===========================================================
 
 # --- Version control ---
@@ -53,12 +55,10 @@ tox.ini
 *.log
 logs/
 
-# --- Docker files (no recursion) ---
+# --- Docker orchestration (not part of the image) ---
 docker-compose.yml
 docker-compose.*.yml
 .docker/
-Dockerfile
-*.dockerfile
 
 # --- Docs / meta ---
 README.md
@@ -66,7 +66,7 @@ LICENSE
 CHANGELOG.md
 .gitattributes
 
-# --- Phase spec files (project root, but build context is backend/) ---
+# --- Project-local files (project root, not relevant to backend image) ---
 Phase*
 build_start.sh
 git_add_commit_push.sh
@@ -74,6 +74,7 @@ git_add_commit_push.sh
 agent_memory.jsonl
 ai_agent_config.json
 ai_agent_session.json
+ai_agent.log
 
 # --- Frontend (served by nginx, not the backend) ---
 frontend/

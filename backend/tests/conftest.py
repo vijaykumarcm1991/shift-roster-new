@@ -5,7 +5,7 @@ fresh for each test function.  The FastAPI ``TestClient`` uses the
 same session via an override of the ``db_session`` dependency.
 """
 
-from typing import Generator, List
+from typing import Generator
 
 import pytest
 from fastapi.testclient import TestClient

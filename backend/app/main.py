@@ -5,14 +5,11 @@ events.
 """
 
 from contextlib import asynccontextmanager
-from pathlib import Path
 
 from fastapi import FastAPI, Request, status
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-from fastapi.staticfiles import StaticFiles
-from fastapi.templating import Jinja2Templates
 
 from app.api.v1.api import api_router
 from app.core.config import settings
@@ -21,14 +18,6 @@ from app.db.seed import seed_admin_user, seed_shift_types
 from app.db.session import SessionLocal
 
 logger = get_logger(__name__)
-
-# Resolve paths relative to the backend package so static/template
-# lookups work both locally and inside the container.
-BASE_DIR = Path(__file__).resolve().parent
-STATIC_DIR = BASE_DIR / "static"
-TEMPLATES_DIR = BASE_DIR / "templates"
-
-templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
 
 
 @asynccontextmanager
@@ -42,8 +31,10 @@ async def lifespan(app: FastAPI):  # noqa: ARG001
     try:
         seed_shift_types(db)
         seed_admin_user(db)
-    except Exception:
-        logger.warning("Seed data could not be applied (tables may not exist yet)")
+    except Exception as exc:  # noqa: BLE001
+        # Tables may not exist yet (e.g. when running locally without
+        # running migrations first). Log the cause for diagnosability.
+        logger.warning("Seed data could not be applied: %s", exc)
     finally:
         db.close()
 
@@ -78,10 +69,13 @@ def create_app() -> FastAPI:
         openapi_url="/api/openapi.json",
     )
 
-    # CORS
+    # CORS — explicit origins only. Wildcard is not combined with
+    # allow_credentials=True (browsers reject that combination per the
+    # CORS spec). In the standard nginx-served deployment, frontend and
+    # backend are on the same origin so CORS is never triggered.
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=settings.backend_cors_origins or ["*"],
+        allow_origins=settings.backend_cors_origins,
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],
@@ -96,10 +90,6 @@ def create_app() -> FastAPI:
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             content={"detail": _format_validation_errors(exc)},
         )
-
-    # Static files (served by backend too, in case nginx is bypassed)
-    if STATIC_DIR.exists():
-        app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 
     # Routers
     app.include_router(api_router, prefix="/api")

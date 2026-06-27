@@ -6,6 +6,7 @@ with a stubbed repository.
 """
 
 from app.repositories.employee import EmployeeRepository  # noqa: F401
+from app.repositories.roster import RosterRepository  # noqa: F401
 from app.repositories.shift_type import ShiftTypeRepository  # noqa: F401
 from app.repositories.team import TeamRepository  # noqa: F401
 from app.repositories.user import UserRepository  # noqa: F401

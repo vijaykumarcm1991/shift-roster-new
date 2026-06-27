@@ -3,15 +3,11 @@
 Directly mirrors the acceptance criteria listed in the Phase 2 spec.
 """
 
-from typing import List
-
 import pytest
 from datetime import date
-from typing import List
 
 from sqlalchemy import inspect, select
 
-from app.db.base import Base
 from app.db.seed import DEFAULT_SHIFT_TYPES, seed_shift_types
 from app.models import Employee, Roster, Setting, ShiftType, Team
 
@@ -145,7 +141,6 @@ class TestIndexes:
     def test_employee_code_index(self, db):
         inspector = inspect(db.bind)
         indexes = inspector.get_indexes("employees")
-        names = {ix["name"] for ix in indexes}
         # SQLAlchemy auto-generates index for unique=True + index=True
         assert any("employee_code" in str(ix.get("column_names", [])) for ix in indexes)
 

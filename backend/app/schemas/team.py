@@ -15,6 +15,10 @@ class TeamBase(BaseModel):
     is_active: bool = True
 
 
+class TeamCreate(TeamBase):
+    """Payload for ``POST /api/teams``."""
+
+
 class TeamRead(TeamBase):
     """Read schema returned by the API."""
 

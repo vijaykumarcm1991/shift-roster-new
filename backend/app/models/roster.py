@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from datetime import date
 from typing import Optional, TYPE_CHECKING
 
 from sqlalchemy import Date, ForeignKey, Index, Integer, Text, UniqueConstraint
@@ -36,19 +37,19 @@ class Roster(Base, TimestampMixin):
         ForeignKey("employees.id", ondelete="CASCADE"),
         nullable=False,
     )
-    shift_type_id: Mapped[int] = mapped_column(
+    shift_type_id: Mapped[Optional[int]] = mapped_column(
         ForeignKey("shift_types.id", ondelete="RESTRICT"),
-        nullable=False,
+        nullable=True,
     )
 
-    roster_date: Mapped["Date"] = mapped_column(Date, nullable=False)
+    roster_date: Mapped[date] = mapped_column(Date, nullable=False)
     remarks: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
 
     # Relationships
     employee: Mapped["Employee"] = relationship(
         "Employee", back_populates="roster_entries"
     )
-    shift_type: Mapped["ShiftType"] = relationship(
+    shift_type: Mapped[Optional["ShiftType"]] = relationship(
         "ShiftType", back_populates="roster_entries"
     )
 

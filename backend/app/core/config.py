@@ -58,6 +58,21 @@ class Settings(BaseSettings):
             return [origin.strip() for origin in value.split(",") if origin.strip()]
         return value
 
+    @field_validator("secret_key", mode="after")
+    @classmethod
+    def _reject_default_secret_in_production(cls, value: str, info) -> str:
+        """Fail loudly in production if the placeholder secret is still in use.
+
+        Development environments (and the test suite) are allowed to keep
+        the placeholder so first-run local workflows still work.
+        """
+        env = (info.data.get("app_env") or "development").lower()
+        if env == "production" and value == "change-me":
+            raise ValueError(
+                "SECRET_KEY must be set to a strong random value in production"
+            )
+        return value
+
     @property
     def sqlalchemy_database_uri(self) -> str:
         """Build the SQLAlchemy DSN from components or return override."""

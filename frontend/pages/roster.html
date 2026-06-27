@@ -10,33 +10,158 @@
   </head>
   <body class="h-full font-sans antialiased bg-slate-100 text-slate-800 transition-colors duration-200 dark:bg-slate-950 dark:text-slate-100">
     <div class="flex h-full">
+      <!-- Sidebar overlay (mobile) -->
       <div id="sidebar-overlay" class="hidden fixed inset-0 z-40 bg-slate-900/50 lg:hidden" aria-hidden="true"></div>
+
+      <!-- Sidebar -->
       <aside id="admin-sidebar" class="sidebar-slide fixed inset-y-0 left-0 z-50 flex w-64 flex-col border-r border-slate-200 bg-white -translate-x-full lg:relative lg:translate-x-0 dark:border-slate-800 dark:bg-slate-900">
-        <div class="flex h-16 items-center gap-3 border-b border-slate-200 px-5 dark:border-slate-800"><div class="grid h-9 w-9 place-items-center rounded-xl bg-gradient-to-br from-indigo-500 to-violet-600 text-white shadow-soft"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-5 w-5"><rect x="3" y="4" width="18" height="18" rx="3"/><path d="M16 2v4M8 2v4M3 10h18"/></svg></div><span class="text-base font-semibold">Shift Roster</span><button id="btn-sidebar-close" type="button" class="ml-auto rounded-lg p-1 text-slate-400 hover:text-slate-600 lg:hidden dark:hover:text-slate-300"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-5 w-5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button></div>
+        <div class="flex h-16 items-center gap-3 border-b border-slate-200 px-5 dark:border-slate-800">
+          <div class="grid h-9 w-9 place-items-center rounded-xl bg-gradient-to-br from-indigo-500 to-violet-600 text-white shadow-soft">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-5 w-5"><rect x="3" y="4" width="18" height="18" rx="3"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+          </div>
+          <span class="text-base font-semibold">Shift Roster</span>
+          <button id="btn-sidebar-close" type="button" class="ml-auto rounded-lg p-1 text-slate-400 hover:text-slate-600 lg:hidden dark:hover:text-slate-300">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-5 w-5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </button>
+        </div>
         <nav class="flex-1 space-y-1 px-3 py-4 overflow-y-auto">
-          <a href="/admin" data-nav class="nav-item flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-5 w-5"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>Dashboard</a>
-          <a href="/admin/employees" data-nav class="nav-item flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-5 w-5"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>Employees</a>
-          <a href="/admin/roster" data-nav class="nav-item flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-5 w-5"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>Roster</a>
-          <a href="/admin/settings" data-nav class="nav-item flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-5 w-5"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>Settings</a>
+          <a href="/admin" data-nav class="nav-item flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-5 w-5"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>Dashboard
+          </a>
+          <a href="/admin/employees" data-nav class="nav-item flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-5 w-5"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>Employees
+          </a>
+          <a href="/admin/roster" data-nav class="nav-item flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-5 w-5"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>Roster
+          </a>
+          <a href="/admin/settings" data-nav class="nav-item flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-5 w-5"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>Settings
+          </a>
         </nav>
-        <div class="border-t border-slate-200 p-3 dark:border-slate-800"><button id="btn-admin-logout" type="button" class="nav-item flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-500/10"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-5 w-5"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>Logout</button></div>
+        <div class="border-t border-slate-200 p-3 dark:border-slate-800">
+          <button id="btn-admin-logout" type="button" class="nav-item flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-500/10">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-5 w-5"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>Logout
+          </button>
+        </div>
       </aside>
+
+      <!-- Main area -->
       <div class="flex flex-1 flex-col overflow-hidden">
+        <!-- Top header -->
         <header class="flex h-16 items-center justify-between border-b border-slate-200 bg-white px-4 dark:border-slate-800 dark:bg-slate-900 sm:px-6">
-          <div class="flex items-center gap-3"><button id="btn-sidebar-open" type="button" class="rounded-lg p-2 text-slate-500 hover:bg-slate-100 lg:hidden dark:text-slate-400 dark:hover:bg-slate-800"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-5 w-5"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg></button><h2 class="text-sm font-semibold text-slate-700 dark:text-slate-200">Roster</h2><span class="hidden text-xs text-slate-400 sm:inline">|</span><span id="current-month" class="hidden text-xs text-slate-500 sm:inline dark:text-slate-400">—</span></div>
-          <div class="flex items-center gap-3"><span class="hidden text-sm text-slate-600 sm:inline dark:text-slate-300"><span id="admin-username" class="font-semibold">—</span></span><button id="theme-toggle" type="button" aria-label="Toggle dark mode" class="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-500 transition hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-400 dark:hover:bg-slate-700"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-4 w-4 hidden dark:block"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-4 w-4 dark:hidden"><path d="M21 12.79A9 9 0 1 1 11.21 3a7 7 0 0 0 9.79 9.79z"/></svg></button></div>
+          <div class="flex items-center gap-3">
+            <button id="btn-sidebar-open" type="button" class="rounded-lg p-2 text-slate-500 hover:bg-slate-100 lg:hidden dark:text-slate-400 dark:hover:bg-slate-800">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-5 w-5"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+            </button>
+            <h2 class="text-sm font-semibold text-slate-700 dark:text-slate-200">Roster</h2>
+          </div>
+          <div class="flex items-center gap-3">
+            <span class="hidden text-sm text-slate-600 sm:inline dark:text-slate-300"><span id="admin-username" class="font-semibold">—</span></span>
+            <button id="theme-toggle" type="button" aria-label="Toggle dark mode" class="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-500 transition hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-400 dark:hover:bg-slate-700">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-4 w-4 hidden dark:block"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-4 w-4 dark:hidden"><path d="M21 12.79A9 9 0 1 1 11.21 3a7 7 0 0 0 9.79 9.79z"/></svg>
+            </button>
+          </div>
         </header>
+
+        <!-- Content -->
         <main class="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
-          <div class="mx-auto max-w-5xl">
-            <div class="rounded-2xl border border-slate-200/70 bg-white p-6 shadow-soft dark:border-slate-800/70 dark:bg-slate-900 sm:p-8">
-              <h3 class="text-lg font-semibold text-slate-900 dark:text-white">Roster Management</h3>
-              <p class="mt-2 text-sm text-slate-500 dark:text-slate-400">Coming in Phase 5</p>
+          <div class="mx-auto max-w-6xl">
+            <!-- Card -->
+            <div class="rounded-2xl border border-slate-200/70 bg-white shadow-soft dark:border-slate-800/70 dark:bg-slate-900">
+              <!-- Card header + month/year selectors -->
+              <div class="flex flex-col gap-4 border-b border-slate-200/70 p-5 dark:border-slate-800/70 sm:flex-row sm:items-center sm:justify-between sm:p-6">
+                <div>
+                  <h3 class="text-lg font-semibold text-slate-900 dark:text-white">Monthly Roster</h3>
+                  <p class="mt-0.5 text-xs text-slate-500 dark:text-slate-400">Generate and preview the shift roster for a given month</p>
+                </div>
+                <div class="flex flex-wrap items-center gap-2">
+                  <select id="month-select" class="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm transition focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100">
+                    <option value="1">January</option><option value="2">February</option><option value="3">March</option><option value="4">April</option><option value="5">May</option><option value="6">June</option><option value="7">July</option><option value="8">August</option><option value="9">September</option><option value="10">October</option><option value="11">November</option><option value="12">December</option>
+                  </select>
+                  <select id="year-select" class="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm transition focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100">
+                    <option value="2024">2024</option><option value="2025">2025</option><option value="2026">2026</option><option value="2027">2027</option>
+                  </select>
+                  <button id="btn-load" type="button" class="inline-flex items-center gap-2 rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-600 transition hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-4 w-4"><path d="M21 12a9 9 0 1 1-3-6.7L21 8"/><path d="M21 3v5h-5"/></svg>Load
+                  </button>
+                  <button id="btn-generate" type="button" class="inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm transition hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-40 dark:focus:ring-offset-slate-900">
+                    <svg id="gen-spinner" class="hidden h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
+                    <svg id="gen-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-4 w-4"><path d="M12 5v14M5 12h14"/></svg>
+                    <span id="gen-text">Generate Roster</span>
+                  </button>
+                </div>
+              </div>
+
+              <!-- Stats row -->
+              <div class="grid grid-cols-2 gap-3 border-b border-slate-200/70 p-5 dark:border-slate-800/70 sm:grid-cols-4 sm:p-6">
+                <div class="rounded-xl border border-slate-200/70 bg-slate-50 p-3 dark:border-slate-800/70 dark:bg-slate-800/40">
+                  <p class="text-[10px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Selected Month</p>
+                  <p id="stat-month" class="mt-1 text-lg font-semibold text-slate-900 dark:text-white">—</p>
+                </div>
+                <div class="rounded-xl border border-slate-200/70 bg-slate-50 p-3 dark:border-slate-800/70 dark:bg-slate-800/40">
+                  <p class="text-[10px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Total Employees</p>
+                  <p id="stat-employees" class="mt-1 text-lg font-semibold text-slate-900 dark:text-white">—</p>
+                </div>
+                <div class="rounded-xl border border-slate-200/70 bg-slate-50 p-3 dark:border-slate-800/70 dark:bg-slate-800/40">
+                  <p class="text-[10px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Total Days</p>
+                  <p id="stat-days" class="mt-1 text-lg font-semibold text-slate-900 dark:text-white">—</p>
+                </div>
+                <div class="rounded-xl border border-slate-200/70 bg-slate-50 p-3 dark:border-slate-800/70 dark:bg-slate-800/40">
+                  <p class="text-[10px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Total Records</p>
+                  <p id="stat-records" class="mt-1 text-lg font-semibold text-slate-900 dark:text-white">—</p>
+                </div>
+              </div>
+
+              <!-- Status message -->
+              <div id="status-row" class="flex items-center gap-2 border-b border-slate-200/70 px-5 py-3 text-sm dark:border-slate-800/70 sm:px-6">
+                <span id="status-dot" class="inline-block h-2 w-2 rounded-full bg-slate-300 dark:bg-slate-600"></span>
+                <span id="status-text" class="text-slate-500 dark:text-slate-400">No roster loaded</span>
+              </div>
+
+              <!-- Loading state -->
+              <div id="loading-state" class="hidden py-12 text-center">
+                <div class="inline-flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400">
+                  <svg class="h-5 w-5 animate-spin" viewBox="0 0 24 24" fill="none"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
+                  Loading roster…
+                </div>
+              </div>
+
+              <!-- Empty state -->
+              <div id="empty-state" class="hidden py-16 text-center">
+                <div class="mx-auto mb-4 grid h-14 w-14 place-items-center rounded-2xl bg-slate-100 text-slate-400 dark:bg-slate-800 dark:text-slate-500">
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="h-7 w-7"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+                </div>
+                <p class="text-sm font-medium text-slate-600 dark:text-slate-300">No Roster Found</p>
+                <p class="mt-1 text-xs text-slate-400 dark:text-slate-500">Click <strong>Generate Roster</strong> to create the empty grid for this month</p>
+              </div>
+
+              <!-- Table wrapper -->
+              <div id="table-wrapper" class="hidden overflow-x-auto">
+                <table class="min-w-full table-auto border-collapse text-sm">
+                  <thead>
+                    <tr class="border-b border-slate-200/70 bg-slate-50/80 dark:border-slate-800/70 dark:bg-slate-800/60">
+                      <th class="px-5 py-3 text-left font-semibold text-slate-600 dark:text-slate-300">Employee Name</th>
+                      <th class="px-5 py-3 text-left font-semibold text-slate-600 dark:text-slate-300">Date</th>
+                      <th class="px-5 py-3 text-left font-semibold text-slate-600 dark:text-slate-300">Shift</th>
+                      <th class="px-5 py-3 text-left font-semibold text-slate-600 dark:text-slate-300">Remarks</th>
+                    </tr>
+                  </thead>
+                  <tbody id="roster-tbody" class="divide-y divide-slate-100 dark:divide-slate-800/70"></tbody>
+                </table>
+                <div id="preview-footer" class="border-t border-slate-200/70 px-5 py-2 text-xs text-slate-500 dark:border-slate-800/70 dark:text-slate-400 sm:px-6"></div>
+              </div>
             </div>
           </div>
         </main>
       </div>
     </div>
+
+    <!-- ===== TOAST CONTAINER ===== -->
+    <div id="toast-container" class="fixed bottom-5 right-5 z-[70] flex flex-col gap-2"></div>
+
     <script src="/assets/js/app.js" defer></script>
     <script src="/assets/js/admin.js" defer></script>
+    <script src="/assets/js/roster.js" defer></script>
   </body>
 </html>
