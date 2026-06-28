@@ -5,11 +5,12 @@ schedules. Admins generate a monthly roster of employees × days and
 edit each cell inline; the same roster is published to a public,
 read-only viewer that requires no login.
 
-> The app has completed **7 phases** of incremental development —
-> project foundation, database models, authentication, employee
-> management, monthly roster generation, the spreadsheet-style
-> roster grid, and inline cell editing. See the [Phase
-> summary](#phase-summary) for details.
+> The app has completed **10 phases** of incremental development —
+> project foundation, database models, authentication, the
+> frontend refactor, employee management, monthly roster
+> generation, the spreadsheet-style roster grid, inline cell
+> editing, expand-to-full-page, and selection + copy + paste + bulk
+> save. See the [Phase summary](#phase-summary) for details.
 
 ---
 
@@ -37,6 +38,10 @@ read-only viewer that requires no login.
 
 - **Admin dashboard** — sidebar layout with Employees, Roster, and
   Settings sections, plus a global "System Ready" status bar.
+- **Public homepage with current-week roster** — the landing page
+  shows a 7-day window centred on today (clamped to the current
+  month) so visitors see this week's schedule immediately. A
+  "View Full Month Roster" button takes them to the full month view.
 - **Employee management** — full CRUD against the `employees` table,
   with team assignment, soft-delete via `is_active`, and pagination.
 - **Team management** — create teams from inside the Employees page;
@@ -48,18 +53,28 @@ read-only viewer that requires no login.
   active employee × day; leap years handled correctly.
 - **Spreadsheet-style roster grid** — sticky frozen header row +
   first column, day cells coloured by shift type, weekend + today
-  highlights, row + column hover, horizontal scroll-fade indicator.
+  highlights, row + column hover, horizontal scroll-fade indicator,
+  and automatic scrolling so today's column is always visible.
 - **Inline cell editing (Phase 7)** — click a cell to type a shift
   code with live autocomplete, or double-click to open a searchable
   dropdown of all DB-backed shift types. Enter saves, Escape
-  cancels, Tab/⇧Tab moves between cells, ↑/↓ navigates the
+  cancels, Tab / ⇧Tab moves between cells, ↑ / ↓ navigates the
   autocomplete.
+- **Selection, copy, paste, bulk save (Phase 8)** — click a cell
+  to select it; click+drag or Shift+click for a rectangular
+  range; Ctrl+A selects every editable cell. Ctrl+C copies the
+  range as tab/newline-separated text; Ctrl+V pastes it as a single
+  bulk PATCH so 3,000 cells update in one request.
+- **Expand to full page** — a single toggle button next to the
+  "today"/"weekend" legend swatches grows the roster card to fill
+  the viewport (position: fixed; inset: 0). Click again or press
+  Escape to compress. Editing still works while expanded.
 - **Public read-only viewer** — the same grid is exposed at
   `/roster` with no auth required, perfect for wall displays or
   shareable links.
 - **Dark mode** — system-preference detection on first load, manual
   toggle, persisted in `localStorage`; works across the entire app
-  including the editing input + dropdown.
+  including the editing input + dropdown + selection states.
 
 ---
 
@@ -79,8 +94,8 @@ read-only viewer that requires no login.
 │   │   ├── repositories/          # Data-access layer
 │   │   ├── services/              # Business logic
 │   │   └── main.py                # FastAPI entrypoint + lifespan seed
-│   ├── alembic/versions/          # 4 migrations (see below)
-│   ├── tests/                     # 118 pytest tests
+│   ├── alembic/versions/          # 5 migrations (see below)
+│   ├── tests/                     # 135 pytest tests
 │   ├── Dockerfile
 │   └── requirements.txt
 │
@@ -90,13 +105,13 @@ read-only viewer that requires no login.
 │   │   └── js/                    # app.js, home.js, login.js,
 │   │                              # admin.js, employees.js,
 │   │                              # roster-grid.js, roster.js,
-│   │                              # public-roster.js
+│   │                              # public-roster.js, home-roster.js
 │   └── pages/                     # HTML pages
-│       ├── index.html             # /
+│       ├── index.html             # /         (current week + admin login)
 │       ├── login.html             # /login
 │       ├── admin.html             # /admin
 │       ├── employees.html         # /admin/employees
-│       ├── roster.html            # /admin/roster (editable)
+│       ├── roster.html            # /admin/roster (editable + select / copy / paste)
 │       ├── public-roster.html     # /roster      (read-only)
 │       └── settings.html          # /admin/settings (placeholder)
 │
@@ -152,8 +167,10 @@ read-only viewer that requires no login.
 3. **Open the application**
 
    - Public homepage:   <http://localhost:7080>
+     (current-week roster preview + Admin Login button)
    - Public roster:     <http://localhost:7080/roster>
    - Admin login:       <http://localhost:7080/login>
+   - Admin roster:      <http://localhost:7080/admin/roster>
    - API docs:          <http://localhost:7080/api/docs>
    - Health check:      <http://localhost:7080/api/health>
    - Backend (direct):  <http://localhost:8001/docs>
@@ -161,7 +178,9 @@ read-only viewer that requires no login.
 
    The backend container automatically runs `alembic upgrade head`
    on startup, then seeds the default admin user and 8 shift types
-   (`S1`, `S2`, `S3`, `G`, `WO`, `CO`, `L`, `GH`) on first launch.
+   (`S1` `Shift 1`, `S2` `Shift 2`, `S3` `Shift 3`, `G` `General`,
+   `WO` `Week Off`, `CO` `Comp Off`, `L` `Leave`, `GH`
+   `Govt Holiday`) on first launch.
 
 ---
 
@@ -179,15 +198,21 @@ handler on every start (it is a no-op if the user already exists).
 
 ## Application routes
 
-| Path                  | Auth     | Purpose                                  |
-|-----------------------|----------|------------------------------------------|
-| `/`                   | public   | System status landing page               |
-| `/roster`             | public   | Read-only monthly roster viewer          |
-| `/login`              | public   | Admin login form                         |
-| `/admin`              | admin    | Dashboard (sidebar + status cards)       |
-| `/admin/employees`    | admin    | Employee Directory (CRUD + Add Team)     |
-| `/admin/roster`       | admin    | Monthly roster (generate + inline edit)  |
-| `/admin/settings`     | admin    | Placeholder (Coming Later)               |
+| Path                  | Auth     | Purpose                                       |
+|-----------------------|----------|-----------------------------------------------|
+| `/`                   | public   | Current-week roster preview + admin login    |
+| `/roster`             | public   | Read-only monthly roster (expand to full page) |
+| `/login`              | public   | Admin login form                              |
+| `/admin`              | admin    | Dashboard (sidebar + status cards)            |
+| `/admin/employees`    | admin    | Employee Directory (CRUD + Add Team)          |
+| `/admin/roster`       | admin    | Monthly roster (generate / edit / select / copy / paste) |
+| `/admin/settings`     | admin    | Placeholder (Coming Later)                    |
+
+The admin roster page (`/admin/roster`) is where most of the action
+happens — it supports all of the editing features (Phase 7) and the
+selection / copy / paste / bulk-save features (Phase 8). Both
+editing and selection are only active for admin users; the public
+`/roster` page renders the same grid in read-only mode.
 
 ---
 
@@ -217,6 +242,7 @@ roster endpoint is unauthenticated.
 | GET    | `/api/roster/{year}/{month}/public`       | public   | Same shape as the admin endpoint, no auth    |
 | POST   | `/api/roster/{year}/{month}/generate`     | admin    | Idempotent: create rows for active employees |
 | PATCH  | `/api/roster/entries/{entry_id}`          | admin    | Update a single cell (shift and/or remarks)  |
+| PATCH  | `/api/roster/entries/bulk`                | admin    | Update many cells in one call (Phase 8)     |
 
 ### Roster response shape
 
@@ -253,7 +279,7 @@ roster endpoint is unauthenticated.
 
 ## Database migrations
 
-Alembic is pre-configured. There are four migrations:
+Alembic is pre-configured. There are five migrations:
 
 | Revision             | Phase | What it does                                              |
 |----------------------|-------|-----------------------------------------------------------|
@@ -261,6 +287,7 @@ Alembic is pre-configured. There are four migrations:
 | `a309597e7b4a`       | 2     | Adds `teams`, `employees`, `shift_types`, `roster`, `settings` |
 | `a9de19cbb87b`       | 3     | Adds `users`                                              |
 | `2026_06_27_1200`    | 5     | Makes `roster.shift_type_id` nullable                     |
+| `2026_06_28_1200`    | 2.1   | Back-fills the `GH` shift type's `display_name` to `"Govt Holiday"` (was `"Gas Holiday"`) |
 
 ```bash
 # Apply migrations (also runs automatically on container start)
@@ -277,7 +304,7 @@ docker compose exec backend alembic downgrade -1
 
 ## Running the test suite
 
-The backend ships with **118 pytest tests** covering models,
+The backend ships with **135 pytest tests** covering models,
 repositories, services, and HTTP endpoints for every phase.
 Tests use an in-memory SQLite database with
 `PRAGMA foreign_keys=ON`, so they are fast and require no
@@ -292,11 +319,12 @@ The test files are split by phase:
 
 | File                                | Tests | Focus                                          |
 |-------------------------------------|------:|------------------------------------------------|
-| `tests/test_phase2_acceptance.py`   |   53  | Teams, employees, shift types, roster models   |
+| `tests/test_phase2_acceptance.py`   |   54  | Teams, employees, shift types, roster models (+ `GH` regression) |
 | `tests/test_config_validators.py`   |    4  | `SECRET_KEY` validator hardening               |
 | `tests/test_phase5_acceptance.py`   |   20  | Roster generation + month query API            |
 | `tests/test_team_api.py`            |   14  | Team CRUD service + API                        |
 | `tests/test_phase7_acceptance.py`   |   27  | Cell editing (PATCH) + public read-only API    |
+| `tests/test_phase8_acceptance.py`   |   16  | Bulk PATCH (selection, copy, paste, performance) |
 
 > **Note on local Python:** the project supports Python 3.9 locally
 > (the Docker image uses 3.12). All type hints use `Optional[X]`
@@ -392,7 +420,9 @@ Behaviour:
 | 5     | ✅     | Monthly Roster generation: idempotent backend + month/year selectors, stats cards, preview table, Generate button                     |
 | 6     | ✅     | Spreadsheet-style roster grid: sticky frozen header + first column, shift colours from DB, weekend/today highlights, row + column hover|
 | 7     | ✅     | Editable cells: click-to-type with autocomplete, double-click searchable dropdown, keyboard nav, PATCH single cell, public read-only viewer |
+| —     | ✅     | Expand to full page: single toggle button beside the today/weekend legend; fixed-inset full-viewport grid with editing still active, Escape to compress |
+| 8     | ✅     | Selection + copy + paste + bulk save: click / click+drag / Shift+click range, Ctrl+A select-all, Ctrl+C / Ctrl+V, single bulk PATCH for up to 3,100 cells |
 
 > Each phase ships with a self-contained acceptance test file that
-> can be run independently; the full suite currently totals 118
+> can be run independently; the full suite currently totals 135
 > passing tests.
