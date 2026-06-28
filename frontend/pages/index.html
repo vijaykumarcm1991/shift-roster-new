@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <meta name="theme-color" content="#0f172a" />
-    <meta name="description" content="Shift Roster — a modern foundation for managing shift schedules." />
+    <meta name="description" content="Shift Roster — current week shift schedule." />
     <title>Shift Roster</title>
     <script src="https://cdn.tailwindcss.com?plugins=forms"></script>
     <script>
@@ -37,10 +37,6 @@
           </div>
         </div>
         <div class="flex items-center gap-2">
-          <a href="/roster" class="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-600 shadow-sm transition hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-4 w-4"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
-            View Roster
-          </a>
           <button id="theme-toggle" type="button" aria-label="Toggle dark mode" class="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 shadow-sm transition hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-5 w-5 hidden dark:block"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-5 w-5 dark:hidden"><path d="M21 12.79A9 9 0 1 1 11.21 3a7 7 0 0 0 9.79 9.79z"/></svg>
@@ -54,42 +50,90 @@
     </header>
 
     <!-- MAIN -->
-    <main class="mx-auto max-w-6xl px-4 py-10 sm:px-6 sm:py-14 lg:px-8">
-      <section class="relative overflow-hidden rounded-3xl border border-slate-200/70 bg-white p-8 shadow-soft transition dark:border-slate-800/70 dark:bg-slate-900 sm:p-12">
-        <div class="pointer-events-none absolute -right-24 -top-24 h-64 w-64 rounded-full bg-gradient-to-br from-indigo-300/40 to-violet-300/40 blur-3xl dark:from-indigo-500/20 dark:to-violet-500/20" aria-hidden="true"></div>
-        <div class="relative">
-          <span class="inline-flex items-center gap-2 rounded-full border border-indigo-200/60 bg-indigo-50 px-3 py-1 text-xs font-medium text-indigo-700 dark:border-indigo-500/30 dark:bg-indigo-500/10 dark:text-indigo-300">
-            <span class="h-1.5 w-1.5 rounded-full bg-indigo-500"></span>
-            System Ready
-          </span>
-          <h2 class="mt-5 text-3xl font-bold tracking-tight sm:text-4xl md:text-5xl">Shift Roster</h2>
-          <p class="mt-3 max-w-2xl text-base text-slate-600 dark:text-slate-300 sm:text-lg">System is ready.</p>
-          <div class="mt-10 flex min-h-[280px] flex-col items-center justify-center rounded-2xl border-2 border-dashed border-slate-200 bg-slate-50/60 p-10 text-center dark:border-slate-800 dark:bg-slate-900/40">
-            <div class="mb-4 grid h-14 w-14 place-items-center rounded-2xl bg-white text-slate-400 shadow-sm dark:bg-slate-800 dark:text-slate-500" aria-hidden="true">
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="h-7 w-7"><rect x="3" y="4" width="18" height="18" rx="3"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
-            </div>
-            <p class="text-sm font-medium text-slate-500 dark:text-slate-400">Roster will appear here.</p>
-            <p class="mt-1 text-xs text-slate-400 dark:text-slate-500">No employees · No shifts · No grid</p>
+    <main class="mx-auto max-w-6xl px-4 py-8 sm:px-6 sm:py-12 lg:px-8">
+      <!-- Compact hero -->
+      <section class="mb-6 sm:mb-8">
+        <span class="inline-flex items-center gap-2 rounded-full border border-indigo-200/60 bg-indigo-50 px-3 py-1 text-xs font-medium text-indigo-700 dark:border-indigo-500/30 dark:bg-indigo-500/10 dark:text-indigo-300">
+          <span class="h-1.5 w-1.5 rounded-full bg-indigo-500"></span>
+          System Ready
+        </span>
+        <h2 class="mt-3 text-2xl font-bold tracking-tight sm:text-3xl">This Week's Roster</h2>
+        <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">A 7-day snapshot of who is on shift. Click any cell to see the full month.</p>
+      </section>
+
+      <!-- Current week roster (the main content) -->
+      <section class="roster-card rounded-2xl border border-slate-200/70 bg-white shadow-soft dark:border-slate-800/70 dark:bg-slate-900">
+        <!-- Card header -->
+        <div class="flex flex-col gap-3 border-b border-slate-200/70 p-5 dark:border-slate-800/70 sm:flex-row sm:items-center sm:justify-between sm:p-6">
+          <div>
+            <h3 class="text-lg font-semibold text-slate-900 dark:text-white">This Week</h3>
+            <p id="home-roster-month" class="mt-0.5 text-xs text-slate-500 dark:text-slate-400">—</p>
           </div>
-          <div class="mt-8 grid grid-cols-1 gap-3 sm:grid-cols-3">
-            <div class="flex items-center gap-3 rounded-2xl border border-slate-200/70 bg-white/60 p-4 dark:border-slate-800/70 dark:bg-slate-900/60">
-              <span class="relative flex h-2.5 w-2.5"><span class="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-60"></span><span class="relative inline-flex h-2.5 w-2.5 rounded-full bg-emerald-500"></span></span>
-              <div class="text-sm"><p class="font-medium">Backend</p><p id="api-status" class="text-xs text-slate-500 dark:text-slate-400">Checking…</p></div>
-            </div>
-            <div class="flex items-center gap-3 rounded-2xl border border-slate-200/70 bg-white/60 p-4 dark:border-slate-800/70 dark:bg-slate-900/60">
-              <span class="h-2.5 w-2.5 rounded-full bg-indigo-500"></span>
-              <div class="text-sm"><p class="font-medium">Database</p><p class="text-xs text-slate-500 dark:text-slate-400">PostgreSQL · Connected</p></div>
-            </div>
-            <div class="flex items-center gap-3 rounded-2xl border border-slate-200/70 bg-white/60 p-4 dark:border-slate-800/70 dark:bg-slate-900/60">
-              <span class="h-2.5 w-2.5 rounded-full bg-violet-500"></span>
-              <div class="text-sm"><p class="font-medium">Auth</p><p class="text-xs text-slate-500 dark:text-slate-400">Public</p></div>
-            </div>
+          <a href="/roster" class="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-600 transition hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-4 w-4"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+            View Full Month Roster
+          </a>
+        </div>
+
+        <!-- Loading state -->
+        <div id="home-roster-loading" class="py-10 text-center">
+          <div class="inline-flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400">
+            <svg class="h-5 w-5 animate-spin" viewBox="0 0 24 24" fill="none"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
+            Loading this week's roster…
+          </div>
+        </div>
+
+        <!-- No active employees state -->
+        <div id="home-roster-no-employees" class="hidden py-14 text-center">
+          <div class="mx-auto mb-3 grid h-12 w-12 place-items-center rounded-2xl bg-slate-100 text-slate-400 dark:bg-slate-800 dark:text-slate-500">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="h-6 w-6"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+          </div>
+          <p class="text-sm font-medium text-slate-600 dark:text-slate-300">No active employees</p>
+          <p class="mt-1 text-xs text-slate-400 dark:text-slate-500">There are no employees on the roster yet.</p>
+        </div>
+
+        <!-- Not generated state -->
+        <div id="home-roster-not-generated" class="hidden py-14 text-center">
+          <div class="mx-auto mb-3 grid h-12 w-12 place-items-center rounded-2xl bg-amber-50 text-amber-500 dark:bg-amber-500/10 dark:text-amber-300">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="h-6 w-6"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+          </div>
+          <p class="text-sm font-medium text-slate-600 dark:text-slate-300">Roster not generated yet</p>
+          <p class="mt-1 text-xs text-slate-400 dark:text-slate-500">An administrator needs to generate the roster for this month.</p>
+        </div>
+
+        <!-- Spreadsheet grid (7-day window) -->
+        <div id="home-roster-grid-container" class="hidden p-3 sm:p-4">
+          <div class="roster-grid-wrapper" id="home-roster-grid-wrapper">
+            <table id="home-roster-grid" class="roster-grid home-roster-grid">
+              <thead id="home-roster-grid-head"></thead>
+              <tbody id="home-roster-grid-body"></tbody>
+            </table>
+            <div class="scroll-fade" aria-hidden="true"></div>
           </div>
         </div>
       </section>
-      <p class="mt-6 text-center text-xs text-slate-400 dark:text-slate-500">&copy; <span id="current-year">—</span> Shift Roster</p>
+
+      <!-- Status cards -->
+      <section class="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-3">
+        <div class="flex items-center gap-3 rounded-2xl border border-slate-200/70 bg-white/60 p-4 dark:border-slate-800/70 dark:bg-slate-900/60">
+          <span class="relative flex h-2.5 w-2.5"><span class="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-60"></span><span class="relative inline-flex h-2.5 w-2.5 rounded-full bg-emerald-500"></span></span>
+          <div class="text-sm"><p class="font-medium">Backend</p><p id="api-status" class="text-xs text-slate-500 dark:text-slate-400">Checking…</p></div>
+        </div>
+        <div class="flex items-center gap-3 rounded-2xl border border-slate-200/70 bg-white/60 p-4 dark:border-slate-800/70 dark:bg-slate-900/60">
+          <span class="h-2.5 w-2.5 rounded-full bg-indigo-500"></span>
+          <div class="text-sm"><p class="font-medium">Database</p><p class="text-xs text-slate-500 dark:text-slate-400">PostgreSQL · Connected</p></div>
+        </div>
+        <div class="flex items-center gap-3 rounded-2xl border border-slate-200/70 bg-white/60 p-4 dark:border-slate-800/70 dark:bg-slate-900/60">
+          <span class="h-2.5 w-2.5 rounded-full bg-violet-500"></span>
+          <div class="text-sm"><p class="font-medium">Auth</p><p class="text-xs text-slate-500 dark:text-slate-400">Public</p></div>
+        </div>
+      </section>
+
+      <p class="mt-8 text-center text-xs text-slate-400 dark:text-slate-500">&copy; <span id="current-year">—</span> Shift Roster</p>
     </main>
+
     <script src="/assets/js/app.js" defer></script>
+    <script src="/assets/js/home-roster.js" defer></script>
     <script src="/assets/js/home.js" defer></script>
   </body>
 </html>

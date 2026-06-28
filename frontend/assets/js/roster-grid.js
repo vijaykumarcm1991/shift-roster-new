@@ -213,14 +213,30 @@
     var isCurrentMonth = (year === now.getFullYear() && month === now.getMonth() + 1);
     var todayDate = now.getDate();
 
-    var colHtml = '<colgroup>';
-    colHtml += '<col style="width:' + EMPLOYEE_COL_WIDTH + 'px">';
+    // ---- <colgroup> ----
+    // With table-layout: fixed, the <col> widths are how the browser
+    // distributes space to every cell in that column. We set:
+    //   - 1 col for the employee (frozen first column)
+    //   - N cols for the days, each DAY_CELL_WIDTH wide
+    // Per the HTML spec, <colgroup> must be a direct child of
+    // <table> — nesting it inside <thead> makes browsers silently
+    // ignore it and fall back to auto-sizing the columns.
+    var colHtml = '<col style="width:' + EMPLOYEE_COL_WIDTH + 'px">';
     for (var c = 1; c <= totalDays; c++) {
       colHtml += '<col style="width:' + DAY_CELL_WIDTH + 'px">';
     }
-    colHtml += '</colgroup>';
+    var table = document.getElementById("roster-grid");
+    if (table) {
+      var colgroup = table.querySelector("colgroup");
+      if (!colgroup) {
+        colgroup = document.createElement("colgroup");
+        table.insertBefore(colgroup, table.firstChild);
+      }
+      colgroup.innerHTML = colHtml;
+    }
 
-    var headHtml = colHtml + "<tr>";
+    // ---- Header row ----
+    var headHtml = "<tr>";
     headHtml +=
       '<th class="corner" scope="col">' +
       '<div class="text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-300">Employee</div>' +
@@ -304,7 +320,10 @@
     }
     els.gridBody.innerHTML = bodyHtml;
 
-    var table = document.getElementById("roster-grid");
+    // Expose column widths as CSS custom properties so the CSS
+    // rules can stay in sync with the <col> definitions without
+    // duplicating the numbers.  The `table` reference is the same
+    // one we created the <colgroup> on above.
     if (table) {
       table.style.setProperty("--roster-day-col-width", DAY_CELL_WIDTH + "px");
       table.style.setProperty("--roster-emp-col-width", EMPLOYEE_COL_WIDTH + "px");
@@ -374,6 +393,46 @@
       window.addEventListener("resize", update);
     }
     return { update: update, attach: attach };
+  }
+
+  // ---- Auto-scroll to today's column ----
+  // If the displayed month is the current month, scroll the wrapper
+  // horizontally so today's column is centred.  We don't scroll at
+  // all if today is already "comfortably visible" — at least one
+  // cell-width of margin on each side — so that a user who has
+  // manually scrolled isn't yanked back to centre.
+  // No-op for past / future months — the user explicitly chose them.
+  function scrollToToday(meta) {
+    if (!meta) return;
+    var today = new Date();
+    if (today.getFullYear() !== meta.year || today.getMonth() + 1 !== meta.month) {
+      return; // Not the current month — leave the scroll position alone.
+    }
+    var day = today.getDate();
+    var cell = document.querySelector(
+      '.roster-grid td[data-day="' + day + '"]'
+    );
+    if (!cell) return;
+    var wrapper = document.getElementById("roster-grid-wrapper");
+    if (!wrapper) return;
+    var cellLeft = cell.offsetLeft;
+    var cellRight = cellLeft + cell.offsetWidth;
+    var viewLeft = wrapper.scrollLeft;
+    var viewRight = viewLeft + wrapper.clientWidth;
+    var margin = cell.offsetWidth;
+    // "Comfortably visible" = at least one cell-width of slack on
+    // both sides.  Without this guard a single click that puts the
+    // column at the viewport edge would always trigger a re-centre.
+    if (
+      cellLeft >= viewLeft + margin &&
+      cellRight <= viewRight - margin
+    ) {
+      return;
+    }
+    // Centre the cell in the viewport.
+    var target = cellLeft - (wrapper.clientWidth - cell.offsetWidth) / 2;
+    var max = Math.max(0, wrapper.scrollWidth - wrapper.clientWidth);
+    wrapper.scrollLeft = Math.max(0, Math.min(target, max));
   }
 
   // ---- Factory ----
@@ -987,7 +1046,10 @@
           if (data.meta.is_generated) {
             setEntriesById(data.entries);
             renderGrid(els, shiftCache, data.meta, data.entries);
-            setTimeout(scrollFade.update, 0);
+            setTimeout(function () {
+              scrollFade.update();
+              scrollToToday(data.meta);
+            }, 0);
           } else {
             if (data.meta.total_employees === 0) {
               renderGrid(els, shiftCache, data.meta, []);
@@ -1044,7 +1106,10 @@
           updateGenerateButton(data.meta.is_generated);
           setEntriesById(data.entries);
           renderGrid(els, shiftCache, data.meta, data.entries);
-          setTimeout(scrollFade.update, 0);
+          setTimeout(function () {
+            scrollFade.update();
+            scrollToToday(data.meta);
+          }, 0);
           if (!silent) {
             showToast(
               "Generated " + data.meta.total_records +
