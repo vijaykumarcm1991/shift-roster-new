@@ -1064,8 +1064,15 @@
         var td = e.target.closest("td.day-cell");
         if (!td) return;
         if (e.target.closest(".editing-input, .editing-dropdown")) return;
+        // Shift+click extends the existing selection; plain click resets
+        // it to a single cell.  The actual selection / drag / copy /
+        // paste wiring lives in setupSelectionHandlers below.
         e.stopPropagation();
-        startEdit(td, "typing");
+        if (e.shiftKey && selectionState.active) {
+          extendSelectionToCell(td);
+        } else {
+          startEdit(td, "typing");
+        }
       });
 
       body.addEventListener("dblclick", function (e) {
@@ -1083,6 +1090,507 @@
         if (e.target.closest(".editing-dropdown")) return;
         commitEdit();
       });
+    }
+
+    // ---- Phase 8: multi-cell selection + copy/paste/bulk ----
+
+    /**
+     * Selection state lives on the factory closure so each page
+     * (admin roster / public month) has its own.  The "range" is
+     * the inclusive rectangle of selected cells.  The "active" cell
+     * is the one with focus inside the range (it gets the heavier
+     * border).  Both are stored as (employeeId, day) tuples.
+     */
+    var selectionState = {
+      range: null,      // { minEmp, maxEmp, minDay, maxDay } or null
+      active: null,     // { empId, day } or null
+    };
+
+    /**
+     * Read (employee_id, day) from a grid cell.  Returns null for
+     * header cells (which don't carry those attributes).
+     */
+    function cellCoords(td) {
+      if (!td) return null;
+      var empId = parseInt(td.getAttribute("data-employee-id"), 10);
+      var day = parseInt(td.getAttribute("data-day"), 10);
+      if (!empId || !day) return null;
+      return { empId: empId, day: day };
+    }
+
+    /**
+     * Walk the DOM and find the cell with the given (empId, day).
+     * Returns null if the cell isn't in the rendered grid.
+     */
+    function findCell(empId, day) {
+      var sel = 'td.day-cell[data-employee-id="' + empId +
+                '"][data-day="' + day + '"]';
+      return els.gridBody.querySelector(sel);
+    }
+
+    /**
+     * Returns the current shift text (the code in the shift-pill, or
+     * "" if empty) for the cell at (empId, day).  Used for Ctrl+C.
+     */
+    function cellShiftText(empId, day) {
+      var td = findCell(empId, day);
+      if (!td) return "";
+      if (td.classList.contains("empty")) return "";
+      var pill = td.querySelector(".shift-pill");
+      return pill ? pill.textContent : "";
+    }
+
+    /**
+     * Apply / clear the .selected CSS class on all cells in the
+     * current range.  Uses CSS class — no per-cell inline styles.
+     */
+    function paintSelection() {
+      // Clear previously-selected cells (we tag them with .selection-tag
+      // so we can find them again without iterating everything).
+      var prev = els.gridBody.querySelectorAll(".selection-tag");
+      for (var i = 0; i < prev.length; i++) {
+        prev[i].classList.remove("selected", "active-cell", "selection-tag");
+      }
+      if (!selectionState.range) return;
+      var r = selectionState.range;
+      for (var empId = r.minEmp; empId <= r.maxEmp; empId++) {
+        for (var day = r.minDay; day <= r.maxDay; day++) {
+          var td = findCell(empId, day);
+          if (!td) continue;
+          td.classList.add("selection-tag", "selected");
+          if (selectionState.active &&
+              selectionState.active.empId === empId &&
+              selectionState.active.day === day) {
+            td.classList.add("active-cell");
+          }
+        }
+      }
+    }
+
+    /**
+     * Replace the current selection with a single cell (or clear it
+     * if td is null).  Also opens the cell for editing.
+     */
+    function setSingleCellSelection(td) {
+      var c = cellCoords(td);
+      if (!c) return;
+      selectionState.range = { minEmp: c.empId, maxEmp: c.empId,
+                                minDay: c.day, maxDay: c.day };
+      selectionState.active = c;
+      paintSelection();
+    }
+
+    /**
+     * Extend the existing selection to include td (the user pressed
+     * Shift+click on a new cell).  The active cell moves to the
+     * new endpoint; the range becomes the bounding box of the old
+     * active cell and the new cell.
+     */
+    function extendSelectionToCell(td) {
+      if (!selectionState.active) return;
+      var c = cellCoords(td);
+      if (!c) return;
+      var a = selectionState.active;
+      selectionState.range = {
+        minEmp: Math.min(a.empId, c.empId),
+        maxEmp: Math.max(a.empId, c.empId),
+        minDay: Math.min(a.day, c.day),
+        maxDay: Math.max(a.day, c.day),
+      };
+      selectionState.active = c;
+      paintSelection();
+    }
+
+    /**
+     * Clear the current selection.  Used when the user clicks outside
+     * the grid or after a successful paste (we don't keep the range
+     * around — Excel-style behaviour).
+     */
+    function clearSelection() {
+      if (!selectionState.range && !selectionState.active) return;
+      var prev = els.gridBody.querySelectorAll(".selection-tag");
+      for (var i = 0; i < prev.length; i++) {
+        prev[i].classList.remove("selected", "active-cell", "selection-tag");
+      }
+      selectionState.range = null;
+      selectionState.active = null;
+    }
+
+    /**
+     * Ctrl+A — select every editable roster cell for the current
+     * month (all employees × all days).
+     */
+    function selectAll() {
+      var rows = els.gridBody.querySelectorAll("tr");
+      if (rows.length === 0) return;
+      // Find the min and max day from the header row.
+      var headerCells = els.gridHead.querySelectorAll("th[data-day]");
+      if (headerCells.length === 0) return;
+      var minDay = parseInt(headerCells[0].getAttribute("data-day"), 10);
+      var maxDay = parseInt(headerCells[headerCells.length - 1].getAttribute("data-day"), 10);
+      var firstEmp = null, lastEmp = null;
+      for (var r = 0; r < rows.length; r++) {
+        var nameCell = rows[r].querySelector("th.employee-name");
+        if (!nameCell) continue;
+        var empId = parseInt(nameCell.getAttribute("data-employee-id"), 10);
+        if (!empId) continue;
+        if (firstEmp === null) firstEmp = empId;
+        lastEmp = empId;
+      }
+      if (firstEmp === null) return;
+      selectionState.range = {
+        minEmp: firstEmp, maxEmp: lastEmp,
+        minDay: minDay, maxDay: maxDay,
+      };
+      selectionState.active = { empId: firstEmp, day: minDay };
+      paintSelection();
+    }
+
+    /**
+     * Move the active cell within the current range (or extend it if
+     * Shift is held).  Used by the keyboard handler in
+     * setupSelectionHandlers.
+     */
+    function moveActive(direction, extend) {
+      if (!selectionState.active) return;
+      var a = selectionState.active;
+      // Find the bounding employee ids in display order.
+      var rows = els.gridBody.querySelectorAll("tr");
+      var empIds = [];
+      for (var r = 0; r < rows.length; r++) {
+        var nameCell = rows[r].querySelector("th.employee-name");
+        if (!nameCell) continue;
+        var empId = parseInt(nameCell.getAttribute("data-employee-id"), 10);
+        if (empId) empIds.push(empId);
+      }
+      var day = a.day;
+      var empId = a.empId;
+      // Find current employee index.
+      var empIdx = empIds.indexOf(empId);
+      if (direction === "up" && empIdx > 0) empId = empIds[empIdx - 1];
+      if (direction === "down" && empIdx < empIds.length - 1) empId = empIds[empIdx + 1];
+      if (direction === "left") day -= 1;
+      if (direction === "right") day += 1;
+      if (day < 1 || day > 31) return; // caller clips to month
+      if (empId !== a.empId || day !== a.day) {
+        if (extend) {
+          selectionState.range = {
+            minEmp: Math.min(selectionState.range.minEmp, empId),
+            maxEmp: Math.max(selectionState.range.maxEmp, empId),
+            minDay: Math.min(selectionState.range.minDay, day),
+            maxDay: Math.max(selectionState.range.maxDay, day),
+          };
+          selectionState.active = { empId: empId, day: day };
+        } else {
+          selectionState.active = { empId: empId, day: day };
+          // Collapse range to a single cell.
+          selectionState.range = {
+            minEmp: empId, maxEmp: empId,
+            minDay: day, maxDay: day,
+          };
+        }
+        paintSelection();
+      }
+    }
+
+    /**
+     * Build the rectangular TSV string for the current range.
+     * One row per employee, one column per day.  Empty cells (no
+     * shift assigned) are emitted as "" (so rectangular layout is
+     * preserved when pasted into another location).
+     */
+    function buildCopyTSV() {
+      if (!selectionState.range) return "";
+      var r = selectionState.range;
+      // Build employee order from the DOM.
+      var rows = els.gridBody.querySelectorAll("tr");
+      var empList = [];
+      for (var i = 0; i < rows.length; i++) {
+        var nameCell = rows[i].querySelector("th.employee-name");
+        if (!nameCell) continue;
+        var eid = parseInt(nameCell.getAttribute("data-employee-id"), 10);
+        if (eid >= r.minEmp && eid <= r.maxEmp) empList.push(eid);
+      }
+      empList.sort(function (a, b) { return a - b; });
+      var lines = [];
+      for (var e = 0; e < empList.length; e++) {
+        var row = [];
+        for (var d = r.minDay; d <= r.maxDay; d++) {
+          row.push(cellShiftText(empList[e], d));
+        }
+        lines.push(row.join("\t"));
+      }
+      return lines.join("\n");
+    }
+
+    /**
+     * Ctrl+C — copy the current range as TSV to the system clipboard.
+     * The grid keeps its own selection state so the user can paste
+     * elsewhere; the TSV text is also stored in a module-level
+     * clipboard for in-app paste.
+     */
+    var appClipboard = ""; // TSV buffer for paste-within-app
+    function copySelection() {
+      if (!selectionState.range) return false;
+      var tsv = buildCopyTSV();
+      appClipboard = tsv;
+      // Use the modern Clipboard API when available (so users can
+      // paste into Excel/Sheets too).  Fall back to a hidden
+      // textarea + execCommand if not.
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        try { navigator.clipboard.writeText(tsv); } catch (_) { /* ignore */ }
+      } else {
+        var ta = document.createElement("textarea");
+        ta.value = tsv;
+        ta.style.position = "fixed";
+        ta.style.opacity = "0";
+        document.body.appendChild(ta);
+        ta.select();
+        try { document.execCommand("copy"); } catch (_) { /* ignore */ }
+        document.body.removeChild(ta);
+      }
+      // Friendly summary: how many cells × how many employees.
+      var r = selectionState.range;
+      var rows = r.maxEmp - r.minEmp + 1;
+      var cols = r.maxDay - r.minDay + 1;
+      showToast("Copied " + (rows * cols) + " cells (" + rows +
+                " employee" + (rows !== 1 ? "s" : "") + " \u00d7 " + cols +
+                " day" + (cols !== 1 ? "s" : "") + ")", "info");
+      return true;
+    }
+
+    /**
+     * Parse a TSV string into a 2-D array of strings.  Handles both
+     * \n and \r\n line breaks; empty trailing lines are dropped.
+     */
+    function parseTSV(tsv) {
+      if (!tsv) return [];
+      var lines = tsv.split(/\r?\n/).filter(function (l) { return l.length > 0; });
+      return lines.map(function (l) { return l.split("\t"); });
+    }
+
+    /**
+     * Ctrl+V — paste the copied rectangle starting at the active
+     * cell.  Build a list of bulk changes and send them all in one
+     * PATCH.  The backend returns per-item results; we update the
+     * cells that succeeded and show a summary toast.
+     */
+    function pasteSelection() {
+      if (!selectionState.active) {
+        showToast("Select a cell first", "error");
+        return;
+      }
+      var tsv = appClipboard;
+      if (!tsv) {
+        // Try the system clipboard as a fallback.
+        if (navigator.clipboard && navigator.clipboard.readText) {
+          navigator.clipboard.readText().then(function (text) {
+            appClipboard = text;
+            doBulkPaste(text);
+          }, function () {
+            showToast("Nothing to paste", "info");
+          });
+          return;
+        }
+        showToast("Nothing to paste", "info");
+        return;
+      }
+      doBulkPaste(tsv);
+    }
+
+    function doBulkPaste(tsv) {
+      var grid = parseTSV(tsv);
+      if (grid.length === 0) {
+        showToast("Nothing to paste", "info");
+        return;
+      }
+      var r = selectionState.active;
+      // Resolve the column order (employee_ids in display order).
+      var rows = els.gridBody.querySelectorAll("tr");
+      var empList = [];
+      for (var i = 0; i < rows.length; i++) {
+        var nameCell = rows[i].querySelector("th.employee-name");
+        if (!nameCell) continue;
+        var eid = parseInt(nameCell.getAttribute("data-employee-id"), 10);
+        if (eid) empList.push(eid);
+      }
+      empList.sort(function (a, b) { return a - b; });
+      // Find the index of the active employee.
+      var startIdx = empList.indexOf(r.empId);
+      if (startIdx === -1) {
+        showToast("Active cell not found in current view", "error");
+        return;
+      }
+      // Build bulk changes; out-of-bounds cells are dropped per spec.
+      var headerCells = els.gridHead.querySelectorAll("th[data-day]");
+      var maxDay = parseInt(headerCells[headerCells.length - 1].getAttribute("data-day"), 10);
+      var changes = [];
+      for (var gi = 0; gi < grid.length; gi++) {
+        var row = grid[gi];
+        var empId = empList[startIdx + gi];
+        if (empId === undefined) break; // pasted grid extends past the last employee
+        for (var ci = 0; ci < row.length; ci++) {
+          var day = r.day + ci;
+          if (day < 1 || day > maxDay) continue;
+          // Per spec: "Only editable roster cells should be modified.
+          // Employee names and headers must never be editable."
+          // We only emit per-day entries, so this is inherently safe.
+          changes.push({
+            employee_id: empId,
+            date: isoDate(lastData.meta.year, lastData.meta.month, day),
+            shift_code: row[ci] || null,
+          });
+        }
+      }
+      if (changes.length === 0) {
+        showToast("Paste would affect no cells (out of bounds)", "info");
+        return;
+      }
+      // Show a "pasting…" indicator.
+      showToast("Pasting " + changes.length + " cells\u2026", "info");
+      // Single bulk PATCH.
+      fetch(apiBase + "/entries/bulk", {
+        method: "PATCH",
+        headers: headers(),
+        body: JSON.stringify({ changes: changes }),
+      })
+        .then(function (r) {
+          if (r.status === 401) { ShiftRoster.logout(); return null; }
+          if (!r.ok) {
+            return r.json().then(function (d) { throw new Error(d.detail || "Paste failed"); });
+          }
+          return r.json();
+        })
+        .then(function (result) {
+          if (!result) return;
+          // Update cells from per-item results.
+          for (var i = 0; i < result.results.length; i++) {
+            var item = result.results[i];
+            if (item.status === "updated" && item.entry) {
+              var td = findCell(item.entry.employee.id, parseInt(item.entry.date.split("-")[2], 10));
+              if (td && item.entry.shift) {
+                renderCellWithShift(td, item.entry.shift, false);
+              } else if (td) {
+                renderCellWithShift(td, null, false);
+              }
+            }
+          }
+          // Summary toast.
+          var msg = "Pasted " + result.updated_count + " cell" +
+                    (result.updated_count !== 1 ? "s" : "");
+          if (result.error_count > 0) {
+            msg += " (" + result.error_count + " failed)";
+            showToast(msg, "error");
+          } else {
+            showToast(msg, "success");
+          }
+        })
+        .catch(function (err) {
+          showToast("Paste failed: " + (err.message || "unknown error"), "error");
+        });
+    }
+
+    /**
+     * Wire up the Phase 8 mouse + keyboard + clipboard handlers.
+     * Called from init() when isEditable is true.  No-op otherwise —
+     * the public read-only page doesn't need selection / copy.
+     */
+    function setupSelectionHandlers() {
+      if (!isEditable) return;
+      if (els.gridBody.dataset.selectionBound === "1") return;
+      els.gridBody.dataset.selectionBound = "1";
+
+      els.gridBody.addEventListener("mousedown", function (e) {
+        if (e.button !== 0) return; // primary button only
+        var td = e.target.closest("td.day-cell");
+        if (!td) return;
+        // If the click handler is about to startEdit, skip drag.
+        // We detect that by checking the click target: editing
+        // handles mousedown on inputs inside the cell.  Plain td mousedown
+        // starts a drag selection.
+        if (e.target.closest(".editing-input, .editing-dropdown")) return;
+        if (selectionState.active && e.shiftKey) {
+          extendSelectionToCell(td);
+          e.preventDefault();
+          return;
+        }
+        // Start a drag from this cell.
+        setSingleCellSelection(td);
+        var dragging = true;
+        var dragStart = cellCoords(td);
+        function onMove(ev) {
+          if (!dragging) return;
+          var target = ev.target.closest("td.day-cell");
+          if (!target) return;
+          if (selectionState.active) {
+            selectionState.range = {
+              minEmp: Math.min(dragStart.empId, cellCoords(target).empId),
+              maxEmp: Math.max(dragStart.empId, cellCoords(target).empId),
+              minDay: Math.min(dragStart.day, cellCoords(target).day),
+              maxDay: Math.max(dragStart.day, cellCoords(target).day),
+            };
+            paintSelection();
+          }
+        }
+        function onUp() {
+          dragging = false;
+          document.removeEventListener("mousemove", onMove);
+          document.removeEventListener("mouseup", onUp);
+        }
+        document.addEventListener("mousemove", onMove);
+        document.addEventListener("mouseup", onUp);
+      });
+
+      // ---- Keyboard navigation + copy/paste on the document so it
+      // works regardless of which element has focus (cells become
+      // <input> during edit, dropdowns steal focus, etc.).
+      document.addEventListener("keydown", function (e) {
+        // Skip when an edit is in progress (the input handles its own keys).
+        if (editingState) return;
+        if (e.ctrlKey || e.metaKey) {
+          if (e.key === "c" || e.key === "C") {
+            if (selectionState.range) {
+              e.preventDefault();
+              copySelection();
+            }
+            return;
+          }
+          if (e.key === "v" || e.key === "V") {
+            e.preventDefault();
+            pasteSelection();
+            return;
+          }
+          if (e.key === "a" || e.key === "A") {
+            e.preventDefault();
+            selectAll();
+            return;
+          }
+        }
+        // Arrow keys with or without Shift — only when the grid is
+        // focused (gridWrapper has tabIndex=0).  This avoids hijacking
+        // arrow keys in form fields elsewhere on the page.
+        if (e.key === "ArrowUp" || e.key === "ArrowDown" ||
+            e.key === "ArrowLeft" || e.key === "ArrowRight") {
+          if (!selectionState.active) return;
+          if (document.activeElement !== gridWrapper) return;
+          e.preventDefault();
+          var dir = e.key.replace("Arrow", "").toLowerCase();
+          moveActive(dir, e.shiftKey);
+          // Auto-scroll the active cell into view.
+          var activeTd = findCell(selectionState.active.empId, selectionState.active.day);
+          if (activeTd && activeTd.scrollIntoView) {
+            activeTd.scrollIntoView({ block: "nearest", inline: "nearest" });
+          }
+        }
+      });
+
+      // ---- Click outside the grid clears the selection.
+      document.addEventListener("click", function (e) {
+        if (!selectionState.range) return;
+        if (e.target.closest("#roster-grid-body")) return;
+        if (e.target.closest(".editing-input, .editing-dropdown")) return;
+        clearSelection();
+      }, true);
     }
 
     // ---- API ----
@@ -1226,6 +1734,7 @@
 
       if (isEditable) {
         setupEditingHandlers();
+        setupSelectionHandlers();
       }
 
       injectColumnHoverCSS();

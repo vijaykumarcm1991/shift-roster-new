@@ -443,6 +443,27 @@ body {
   pointer-events: none;
 }
 
+/* ---- Phase 8: multi-cell selection ---- */
+/* The selection is a soft indigo wash on all selected cells; the
+   "active" cell inside the range gets a stronger border.  Both use
+   !important so they beat the row/col hover rules. */
+.roster-grid td.day-cell.selected {
+  background-color: rgb(199 210 254 / 0.45) !important;
+  box-shadow: inset 0 0 0 1px rgb(99 102 241 / 0.6) !important;
+}
+.dark .roster-grid td.day-cell.selected {
+  background-color: rgb(30 27 75 / 0.45) !important;
+  box-shadow: inset 0 0 0 1px rgb(129 140 248 / 0.6) !important;
+}
+.roster-grid td.day-cell.active-cell {
+  background-color: rgb(199 210 254 / 0.85) !important;
+  box-shadow: inset 0 0 0 2px rgb(79 70 229 / 1) !important;
+}
+.dark .roster-grid td.day-cell.active-cell {
+  background-color: rgb(30 27 75 / 0.75) !important;
+  box-shadow: inset 0 0 0 2px rgb(165 180 252 / 1) !important;
+}
+
 /* ---- Validation error flash (typed unknown code) ---- */
 .roster-grid td.day-cell .editing-input.validation-error {
   background-color: rgb(254 226 226 / 1);
