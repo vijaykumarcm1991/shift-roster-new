@@ -68,7 +68,7 @@
         <main class="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
           <div class="mx-auto max-w-6xl">
             <!-- Card -->
-            <div class="rounded-2xl border border-slate-200/70 bg-white shadow-soft dark:border-slate-800/70 dark:bg-slate-900">
+            <div class="roster-card rounded-2xl border border-slate-200/70 bg-white shadow-soft dark:border-slate-800/70 dark:bg-slate-900">
               <!-- Card header + month/year selectors -->
               <div class="flex flex-col gap-4 border-b border-slate-200/70 p-5 dark:border-slate-800/70 sm:flex-row sm:items-center sm:justify-between sm:p-6">
                 <div>
@@ -100,16 +100,16 @@
                   <p id="stat-month" class="mt-1 text-lg font-semibold text-slate-900 dark:text-white">—</p>
                 </div>
                 <div class="rounded-xl border border-slate-200/70 bg-slate-50 p-3 dark:border-slate-800/70 dark:bg-slate-800/40">
-                  <p class="text-[10px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Total Employees</p>
+                  <p class="text-[10px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Number of Employees</p>
                   <p id="stat-employees" class="mt-1 text-lg font-semibold text-slate-900 dark:text-white">—</p>
                 </div>
                 <div class="rounded-xl border border-slate-200/70 bg-slate-50 p-3 dark:border-slate-800/70 dark:bg-slate-800/40">
-                  <p class="text-[10px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Total Days</p>
+                  <p class="text-[10px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Number of Days</p>
                   <p id="stat-days" class="mt-1 text-lg font-semibold text-slate-900 dark:text-white">—</p>
                 </div>
                 <div class="rounded-xl border border-slate-200/70 bg-slate-50 p-3 dark:border-slate-800/70 dark:bg-slate-800/40">
-                  <p class="text-[10px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Total Records</p>
-                  <p id="stat-records" class="mt-1 text-lg font-semibold text-slate-900 dark:text-white">—</p>
+                  <p class="text-[10px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Total Cells</p>
+                  <p id="stat-cells" class="mt-1 text-lg font-semibold text-slate-900 dark:text-white">—</p>
                 </div>
               </div>
 
@@ -127,29 +127,33 @@
                 </div>
               </div>
 
-              <!-- Empty state -->
-              <div id="empty-state" class="hidden py-16 text-center">
+              <!-- No active employees state -->
+              <div id="no-employees-state" class="hidden py-16 text-center">
                 <div class="mx-auto mb-4 grid h-14 w-14 place-items-center rounded-2xl bg-slate-100 text-slate-400 dark:bg-slate-800 dark:text-slate-500">
-                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="h-7 w-7"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="h-7 w-7"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
                 </div>
-                <p class="text-sm font-medium text-slate-600 dark:text-slate-300">No Roster Found</p>
-                <p class="mt-1 text-xs text-slate-400 dark:text-slate-500">Click <strong>Generate Roster</strong> to create the empty grid for this month</p>
+                <p class="text-sm font-medium text-slate-600 dark:text-slate-300">No Active Employees</p>
+                <p class="mt-1 text-xs text-slate-400 dark:text-slate-500">Add employees before generating the roster</p>
               </div>
 
-              <!-- Table wrapper -->
-              <div id="table-wrapper" class="hidden overflow-x-auto">
-                <table class="min-w-full table-auto border-collapse text-sm">
-                  <thead>
-                    <tr class="border-b border-slate-200/70 bg-slate-50/80 dark:border-slate-800/70 dark:bg-slate-800/60">
-                      <th class="px-5 py-3 text-left font-semibold text-slate-600 dark:text-slate-300">Employee Name</th>
-                      <th class="px-5 py-3 text-left font-semibold text-slate-600 dark:text-slate-300">Date</th>
-                      <th class="px-5 py-3 text-left font-semibold text-slate-600 dark:text-slate-300">Shift</th>
-                      <th class="px-5 py-3 text-left font-semibold text-slate-600 dark:text-slate-300">Remarks</th>
-                    </tr>
-                  </thead>
-                  <tbody id="roster-tbody" class="divide-y divide-slate-100 dark:divide-slate-800/70"></tbody>
-                </table>
-                <div id="preview-footer" class="border-t border-slate-200/70 px-5 py-2 text-xs text-slate-500 dark:border-slate-800/70 dark:text-slate-400 sm:px-6"></div>
+              <!-- Grid summary line (above the grid) -->
+              <div id="grid-summary" class="hidden items-center justify-between gap-3 border-b border-slate-200/70 px-5 py-3 text-sm dark:border-slate-800/70 sm:px-6">
+                <span id="summary-text" class="text-slate-600 dark:text-slate-300">—</span>
+                <span id="summary-legend" class="hidden items-center gap-2 text-xs text-slate-500 sm:flex dark:text-slate-400">
+                  <span class="inline-flex items-center gap-1"><span class="inline-block h-3 w-3 rounded bg-indigo-500"></span>today</span>
+                  <span class="inline-flex items-center gap-1"><span class="inline-block h-3 w-3 rounded bg-slate-200 dark:bg-slate-700"></span>weekend</span>
+                </span>
+              </div>
+
+              <!-- Spreadsheet grid (Phase 6) -->
+              <div id="grid-container" class="hidden p-3 sm:p-4">
+                <div class="roster-grid-wrapper" id="roster-grid-wrapper">
+                  <table id="roster-grid" class="roster-grid">
+                    <thead id="roster-grid-head"></thead>
+                    <tbody id="roster-grid-body"></tbody>
+                  </table>
+                  <div class="scroll-fade" aria-hidden="true"></div>
+                </div>
               </div>
             </div>
           </div>

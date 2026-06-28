@@ -1,18 +1,19 @@
 /* ------------------------------------------------------------------
-   Shift Roster — Roster Management page (Phase 5)
+   Shift Roster — Roster Management page (Phase 5 + Phase 6)
+   Phase 5: generation + read API
+   Phase 6: spreadsheet-style grid (display-only, no editing yet)
+   Phase 7 will add editing on top of this same grid structure.
    ------------------------------------------------------------------ */
 
 (function () {
   "use strict";
 
-  // Ensure theme + boot wiring runs on this page even if admin.js
-  // hasn't loaded yet.
   if (window.ShiftRoster && typeof ShiftRoster.boot === "function") {
     ShiftRoster.boot();
   }
 
   var API_BASE = "/api/roster";
-  var PREVIEW_LIMIT = 50;
+  var SHIFT_TYPES_API = "/api/shift-types";
 
   var monthSelect = document.getElementById("month-select");
   var yearSelect = document.getElementById("year-select");
@@ -25,15 +26,47 @@
   var statMonth = document.getElementById("stat-month");
   var statEmployees = document.getElementById("stat-employees");
   var statDays = document.getElementById("stat-days");
-  var statRecords = document.getElementById("stat-records");
+  var statCells = document.getElementById("stat-cells");
   var statusDot = document.getElementById("status-dot");
   var statusText = document.getElementById("status-text");
   var loadingState = document.getElementById("loading-state");
-  var emptyState = document.getElementById("empty-state");
-  var tableWrapper = document.getElementById("table-wrapper");
-  var tbody = document.getElementById("roster-tbody");
-  var previewFooter = document.getElementById("preview-footer");
+  var noEmployeesState = document.getElementById("no-employees-state");
+  var gridSummary = document.getElementById("grid-summary");
+  var summaryText = document.getElementById("summary-text");
+  var gridContainer = document.getElementById("grid-container");
+  var gridHead = document.getElementById("roster-grid-head");
+  var gridBody = document.getElementById("roster-grid-body");
   var toastContainer = document.getElementById("toast-container");
+
+  // ---- Constants ----
+
+  var WEEKDAY_SHORT = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+
+  // Width of a single day column in the grid (in px). This is the ONE
+  // place that controls how wide every day cell is — the value is
+  // applied via <col> elements for table-layout: fixed, and the CSS
+  // reads it through a CSS custom property so all cells stay in sync.
+  var DAY_CELL_WIDTH = 60;
+
+  // Width of the frozen first (employee) column (in px). Same story.
+  var EMPLOYEE_COL_WIDTH = 200;
+
+  // RGB triplets for the named CSS colors used by the seed shift types.
+  // Used to render tinted cell backgrounds without losing readability.
+  var COLOR_RGB = {
+    blue:   [59, 130, 246],
+    green:  [34, 197, 94],
+    purple: [168, 85, 247],
+    violet: [139, 92, 246],
+    gray:   [107, 114, 128],
+    orange: [249, 115, 22],
+    red:    [239, 68, 68],
+    yellow: [234, 179, 8],
+  };
+
+  // ---- Cached state ----
+
+  var shiftTypesById = {};  // populated from /api/shift-types
 
   // ---- Helpers ----
 
@@ -50,6 +83,18 @@
     var d = document.createElement("div");
     d.textContent = String(str);
     return d.innerHTML;
+  }
+
+  function shiftColorRgb(color) {
+    return COLOR_RGB[color] || COLOR_RGB.gray;
+  }
+
+  function pad2(n) {
+    return n < 10 ? "0" + n : "" + n;
+  }
+
+  function isoDate(year, month, day) {
+    return year + "-" + pad2(month) + "-" + pad2(day);
   }
 
   // ---- Toast ----
@@ -75,19 +120,18 @@
     setTimeout(function () {
       el.style.opacity = "0";
       el.style.transform = "translateX(100%)";
-      setTimeout(function () {
-        el.remove();
-      }, 300);
+      setTimeout(function () { el.remove(); }, 300);
     }, 3500);
   }
 
-  // ---- Rendering ----
+  // ---- Status / stats ----
 
   function setLoading(loading) {
     if (loading) {
       loadingState.classList.remove("hidden");
-      tableWrapper.classList.add("hidden");
-      emptyState.classList.add("hidden");
+      gridContainer.classList.add("hidden");
+      gridSummary.classList.add("hidden");
+      noEmployeesState.classList.add("hidden");
     } else {
       loadingState.classList.add("hidden");
     }
@@ -95,10 +139,8 @@
 
   function setStatus(generated, monthName) {
     if (generated) {
-      statusDot.className =
-        "inline-block h-2 w-2 rounded-full bg-emerald-500";
-      statusText.textContent =
-        "Roster for " + monthName + " has been generated.";
+      statusDot.className = "inline-block h-2 w-2 rounded-full bg-emerald-500";
+      statusText.textContent = "Roster for " + monthName + " has been generated.";
       statusText.className = "text-slate-700 dark:text-slate-200";
     } else {
       statusDot.className = "inline-block h-2 w-2 rounded-full bg-amber-500";
@@ -109,70 +151,10 @@
   }
 
   function renderStats(meta) {
-    statMonth.textContent =
-      meta.month_name + " " + meta.year;
+    statMonth.textContent = meta.month_name + " " + meta.year;
     statEmployees.textContent = meta.total_employees;
     statDays.textContent = meta.total_days;
-    statRecords.textContent = meta.total_records;
-  }
-
-  function renderTable(entries) {
-    tbody.innerHTML = "";
-    if (!entries || entries.length === 0) {
-      tableWrapper.classList.add("hidden");
-      previewFooter.textContent = "";
-      return;
-    }
-    tableWrapper.classList.remove("hidden");
-    var shown = 0;
-    for (var i = 0; i < entries.length; i++) {
-      if (shown >= PREVIEW_LIMIT) break;
-      var e = entries[i];
-      var shiftCell;
-      if (e.shift) {
-        shiftCell =
-          '<span class="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-medium dark:bg-slate-800"><span class="h-1.5 w-1.5 rounded-full" style="background-color:' +
-          esc(e.shift.color) +
-          '"></span>' +
-          esc(e.shift.code) +
-          " " +
-          esc(e.shift.display_name) +
-          "</span>";
-      } else {
-        shiftCell =
-          '<span class="text-xs text-slate-400 dark:text-slate-500">—</span>';
-      }
-      var tr = document.createElement("tr");
-      tr.className =
-        "transition hover:bg-slate-50/80 dark:hover:bg-slate-800/40";
-      tr.innerHTML =
-        '<td class="px-5 py-2.5 text-slate-900 dark:text-slate-100">' +
-        esc(e.employee.employee_name) +
-        ' <span class="text-xs text-slate-400">(' +
-        esc(e.employee.employee_code) +
-        ")</span></td>" +
-        '<td class="px-5 py-2.5 text-slate-600 dark:text-slate-300">' +
-        esc(e.date) +
-        "</td>" +
-        '<td class="px-5 py-2.5">' +
-        shiftCell +
-        "</td>" +
-        '<td class="px-5 py-2.5 text-slate-600 dark:text-slate-300">' +
-        (e.remarks ? esc(e.remarks) : '<span class="text-xs text-slate-400 dark:text-slate-500">—</span>') +
-        "</td>";
-      tbody.appendChild(tr);
-      shown++;
-    }
-    if (entries.length > PREVIEW_LIMIT) {
-      previewFooter.textContent =
-        "Showing first " +
-        PREVIEW_LIMIT +
-        " of " +
-        entries.length +
-        " rows";
-    } else {
-      previewFooter.textContent = "Showing all " + entries.length + " rows";
-    }
+    statCells.textContent = (meta.total_employees * meta.total_days).toLocaleString();
   }
 
   function updateGenerateButton(generated) {
@@ -184,23 +166,297 @@
     }
   }
 
+  // ---- Shift types cache ----
+
+  function loadShiftTypes() {
+    return fetch(SHIFT_TYPES_API, { headers: headers() })
+      .then(function (r) { return r.json(); })
+      .then(function (types) {
+        var byId = {};
+        for (var i = 0; i < types.length; i++) {
+          byId[types[i].id] = types[i];
+        }
+        shiftTypesById = byId;
+      })
+      .catch(function () {
+        // Non-fatal — cells will just show no color
+        shiftTypesById = {};
+      });
+  }
+
+  // ---- Column hover (injected styles + event handlers) ----
+
+  function injectColumnHoverCSS() {
+    if (document.getElementById("col-hover-styles")) return;
+    var style = document.createElement("style");
+    style.id = "col-hover-styles";
+    var lines = [];
+    for (var d = 1; d <= 31; d++) {
+      lines.push(
+        ".roster-grid.col-hover-" + d + " td[data-day=\"" + d + "\"]," +
+        ".roster-grid.col-hover-" + d + " th[data-day=\"" + d + "\"]" +
+        "{background-color:rgb(224 231 255 / 0.6) !important;" +
+        "box-shadow:inset 0 0 0 1px rgb(165 180 252 / 0.5);}"
+      );
+      lines.push(
+        ".dark .roster-grid.col-hover-" + d + " td[data-day=\"" + d + "\"]," +
+        ".dark .roster-grid.col-hover-" + d + " th[data-day=\"" + d + "\"]" +
+        "{background-color:rgb(30 27 75 / 0.5) !important;}"
+      );
+    }
+    style.textContent = lines.join("\n");
+    document.head.appendChild(style);
+  }
+
+  function attachColumnHover() {
+    var table = document.getElementById("roster-grid");
+    if (!table || table.dataset.colHoverBound === "1") return;
+    table.dataset.colHoverBound = "1";
+
+    table.addEventListener("mouseover", function (e) {
+      var cell = e.target.closest("th[data-day], td[data-day]");
+      if (!cell || !table.contains(cell)) return;
+      var day = cell.getAttribute("data-day");
+      if (!day) return;
+      // Remove any other col-hover-* class first
+      var toRemove = [];
+      for (var i = 0; i < table.classList.length; i++) {
+        var c = table.classList[i];
+        if (c.indexOf("col-hover-") === 0) toRemove.push(c);
+      }
+      for (var j = 0; j < toRemove.length; j++) table.classList.remove(toRemove[j]);
+      table.classList.add("col-hover-" + day);
+    });
+
+    table.addEventListener("mouseout", function (e) {
+      var cell = e.target.closest("th[data-day], td[data-day]");
+      if (!cell) return;
+      var day = cell.getAttribute("data-day");
+      if (!day) return;
+      // Only remove the class if the new target is NOT in the same column
+      var related = e.relatedTarget;
+      if (
+        related &&
+        related.closest &&
+        related.closest("[data-day=\"" + day + "\"]")
+      ) {
+        return; // still within the same column — keep highlight
+      }
+      table.classList.remove("col-hover-" + day);
+    });
+  }
+
+  // ---- Horizontal scroll indicator (fade gradient on right edge) ----
+  // The grid is wider than the card on most screens. A small fade on the
+  // right edge signals there's more content off-screen and that the user
+  // can scroll horizontally. It hides when scrolled to the end.
+  function updateScrollFade() {
+    var wrapper = document.getElementById("roster-grid-wrapper");
+    if (!wrapper) return;
+    var hasMore = wrapper.scrollWidth > wrapper.clientWidth;
+    var atEnd = wrapper.scrollLeft + wrapper.clientWidth >= wrapper.scrollWidth - 1;
+    if (hasMore && !atEnd) {
+      wrapper.classList.add("has-scroll-fade");
+    } else {
+      wrapper.classList.remove("has-scroll-fade");
+    }
+  }
+
+  function attachScrollFade() {
+    var wrapper = document.getElementById("roster-grid-wrapper");
+    if (!wrapper || wrapper.dataset.fadeBound === "1") return;
+    wrapper.dataset.fadeBound = "1";
+    wrapper.addEventListener("scroll", updateScrollFade);
+    window.addEventListener("resize", updateScrollFade);
+  }
+
+  // ---- Grid rendering ----
+
+  function renderGrid(meta, entries) {
+    var year = meta.year;
+    var month = meta.month;
+    var totalDays = meta.total_days;
+    var totalEmployees = meta.total_employees;
+
+    if (totalEmployees === 0) {
+      noEmployeesState.classList.remove("hidden");
+      gridContainer.classList.add("hidden");
+      gridSummary.classList.add("hidden");
+      return;
+    }
+
+    // Summary line
+    gridSummary.classList.remove("hidden");
+    gridSummary.classList.add("flex");
+    var totalCells = totalEmployees * totalDays;
+    summaryText.textContent =
+      totalEmployees +
+      " Employee" + (totalEmployees !== 1 ? "s" : "") +
+      " × " +
+      totalDays +
+      " Day" + (totalDays !== 1 ? "s" : "") +
+      " = " +
+      totalCells.toLocaleString() +
+      " Cell" + (totalCells !== 1 ? "s" : "");
+
+    // Group entries by employee_id, indexed by ISO date
+    var byEmpDate = {};
+    for (var i = 0; i < entries.length; i++) {
+      var e = entries[i];
+      if (!byEmpDate[e.employee.id]) byEmpDate[e.employee.id] = {};
+      byEmpDate[e.employee.id][e.date] = e;
+    }
+
+    // Discover distinct active employees (preserves entry order = display order)
+    var employees = [];
+    var seen = {};
+    for (var j = 0; j < entries.length; j++) {
+      var emp = entries[j].employee;
+      if (!seen[emp.id]) {
+        seen[emp.id] = true;
+        employees.push(emp);
+      }
+    }
+    // If generated but somehow empty (shouldn't happen, but defensive)
+    if (employees.length === 0) {
+      // Fall back to no render
+      gridContainer.classList.add("hidden");
+      return;
+    }
+
+    // "Today" comparison values
+    var now = new Date();
+    var isCurrentMonth = (year === now.getFullYear() && month === now.getMonth() + 1);
+    var todayDate = now.getDate();
+
+    // ---- <colgroup> ----
+    // With table-layout: fixed, the <col> widths are how the browser
+    // distributes space to every cell in that column. We set:
+    //   - 1 col for the employee (frozen first column)
+    //   - N cols for the days, each DAY_CELL_WIDTH wide
+    // The <colgroup> goes inside <thead> at the top.
+    var colHtml = '<colgroup>';
+    colHtml += '<col style="width:' + EMPLOYEE_COL_WIDTH + 'px">';
+    for (var c = 1; c <= totalDays; c++) {
+      colHtml += '<col style="width:' + DAY_CELL_WIDTH + 'px">';
+    }
+    colHtml += '</colgroup>';
+
+    // ---- Header row ----
+    var headHtml = colHtml + "<tr>";
+    headHtml +=
+      '<th class="corner" scope="col">' +
+      '<div class="text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-300">Employee</div>' +
+      '<div class="mt-0.5 text-[10px] font-medium text-slate-400 dark:text-slate-500">Code · Team</div>' +
+      "</th>";
+
+    for (var d = 1; d <= totalDays; d++) {
+      var dateObj = new Date(year, month - 1, d);
+      var dow = dateObj.getDay(); // 0=Sun .. 6=Sat
+      var isWeekend = dow === 0 || dow === 6;
+      var isToday = isCurrentMonth && d === todayDate;
+      var thClasses = [];
+      if (isWeekend) thClasses.push("weekend");
+      if (isToday) thClasses.push("today");
+      headHtml +=
+        '<th scope="col" data-day="' + d + '"' +
+        (thClasses.length ? ' class="' + thClasses.join(" ") + '"' : "") +
+        ">" +
+        '<div class="day-num">' + d + "</div>" +
+        '<div class="day-name">' + WEEKDAY_SHORT[dow] + "</div>" +
+        "</th>";
+    }
+    headHtml += "</tr>";
+    gridHead.innerHTML = headHtml;
+
+    // ---- Body rows ----
+    var bodyHtml = "";
+    for (var k = 0; k < employees.length; k++) {
+      var employee = employees[k];
+      var rowEntries = byEmpDate[employee.id] || {};
+
+      // Row header (frozen employee name)
+      bodyHtml += "<tr>";
+      bodyHtml +=
+        '<th class="employee-name" scope="row" data-employee-id="' + employee.id + '">' +
+        '<div class="truncate font-medium">' + esc(employee.employee_name) + "</div>" +
+        '<div class="mt-0.5 truncate text-[10px] font-normal text-slate-400 dark:text-slate-500">' +
+        esc(employee.employee_code) +
+        (employee.team_name ? " · " + esc(employee.team_name) : "") +
+        "</div>" +
+        "</th>";
+
+      // Day cells
+      for (var day = 1; day <= totalDays; day++) {
+        var iso = isoDate(year, month, day);
+        var entry = rowEntries[iso];
+        var dayDate = new Date(year, month - 1, day);
+        var dayDow = dayDate.getDay();
+        var dayWeekend = dayDow === 0 || dayDow === 6;
+        var dayToday = isCurrentMonth && day === todayDate;
+
+        var cellClasses = ["day-cell"];
+        if (dayWeekend) cellClasses.push("weekend");
+        if (dayToday) cellClasses.push("today");
+
+        var inner = "";
+        if (entry && entry.shift) {
+          var shiftType = shiftTypesById[entry.shift.id];
+          var colorName = (shiftType && shiftType.color) || entry.shift.color || "gray";
+          var rgb = shiftColorRgb(colorName);
+          inner =
+            '<div class="shift-pill" style="background-color: rgb(' +
+            rgb.join(",") +
+            ');" title="' +
+            esc(entry.shift.display_name || entry.shift.code || "") +
+            '">' +
+            esc(entry.shift.code || "") +
+            "</div>";
+        } else {
+          cellClasses.push("empty");
+        }
+
+        bodyHtml +=
+          '<td class="' + cellClasses.join(" ") + '"' +
+          ' data-employee-id="' + employee.id + '"' +
+          ' data-date="' + iso + '"' +
+          ' data-day="' + day + '"' +
+          ">" + inner + "</td>";
+      }
+      bodyHtml += "</tr>";
+    }
+    gridBody.innerHTML = bodyHtml;
+
+    // Expose column widths as CSS custom properties so the CSS
+    // rules can stay in sync with the <col> definitions without
+    // duplicating the numbers.
+    var table = document.getElementById("roster-grid");
+    if (table) {
+      table.style.setProperty("--roster-day-col-width", DAY_CELL_WIDTH + "px");
+      table.style.setProperty("--roster-emp-col-width", EMPLOYEE_COL_WIDTH + "px");
+    }
+
+    // Show the grid
+    gridContainer.classList.remove("hidden");
+
+    // Update the scroll-fade indicator after layout settles
+    // (needs to know the final scrollWidth/clientWidth)
+    setTimeout(updateScrollFade, 0);
+  }
+
   // ---- API ----
 
   function loadRoster(autoGenerate) {
     var year = parseInt(yearSelect.value, 10);
     var month = parseInt(monthSelect.value, 10);
+    var monthLabel = monthSelect.options[monthSelect.selectedIndex].text + " " + year;
     setLoading(true);
-    setStatus(false, monthSelect.options[monthSelect.selectedIndex].text + " " + year);
+    setStatus(false, monthLabel);
 
     fetch(API_BASE + "/" + year + "/" + month, { headers: headers() })
       .then(function (r) {
-        if (r.status === 401) {
-          ShiftRoster.logout();
-          return null;
-        }
-        if (!r.ok) {
-          throw new Error("Failed to load roster");
-        }
+        if (r.status === 401) { ShiftRoster.logout(); return null; }
+        if (!r.ok) { throw new Error("Failed to load roster"); }
         return r.json();
       })
       .then(function (data) {
@@ -209,20 +465,19 @@
         setStatus(data.meta.is_generated, data.meta.month_name + " " + data.meta.year);
         updateGenerateButton(data.meta.is_generated);
         if (data.meta.is_generated) {
-          renderTable(data.entries);
+          renderGrid(data.meta, data.entries);
         } else {
           if (data.meta.total_employees === 0) {
-            tableWrapper.classList.add("hidden");
-            emptyState.classList.add("hidden");
-            statusText.textContent =
-              "No active employees — add at least one to generate a roster.";
-          } else {
-            emptyState.classList.remove("hidden");
-            tableWrapper.classList.add("hidden");
-            if (autoGenerate) {
-              generateRoster(true);
-              return;
-            }
+            renderGrid(data.meta, []);
+            return;
+          }
+          // Active employees but no roster yet → show only the empty employees state
+          gridContainer.classList.add("hidden");
+          gridSummary.classList.add("hidden");
+          noEmployeesState.classList.add("hidden");
+          if (autoGenerate) {
+            generateRoster(true);
+            return;
           }
         }
         setLoading(false);
@@ -240,16 +495,15 @@
     genIcon.classList.add("hidden");
     genSpinner.classList.remove("hidden");
     genText.textContent = "Generating…";
+    // Clear the page-level loading state — the button spinner is enough.
+    setLoading(false);
 
     fetch(API_BASE + "/" + year + "/" + month + "/generate", {
       method: "POST",
       headers: headers(),
     })
       .then(function (r) {
-        if (r.status === 401) {
-          ShiftRoster.logout();
-          return null;
-        }
+        if (r.status === 401) { ShiftRoster.logout(); return null; }
         if (!r.ok) {
           return r.json().then(function (d) {
             throw new Error(d.detail || "Generation failed");
@@ -262,8 +516,7 @@
         renderStats(data.meta);
         setStatus(data.meta.is_generated, data.meta.month_name + " " + data.meta.year);
         updateGenerateButton(data.meta.is_generated);
-        renderTable(data.entries);
-        emptyState.classList.add("hidden");
+        renderGrid(data.meta, data.entries);
         if (!silent) {
           showToast(
             "Generated " +
@@ -295,7 +548,6 @@
   // ---- Init ----
 
   function init() {
-    // Default selectors to current month/year
     var now = new Date();
     monthSelect.value = String(now.getMonth() + 1);
     var year = now.getFullYear();
@@ -307,21 +559,16 @@
     }
     yearSelect.value = String(year);
 
-    btnLoad.addEventListener("click", function () {
-      loadRoster(false);
-    });
-    btnGenerate.addEventListener("click", function () {
-      generateRoster(false);
-    });
-    monthSelect.addEventListener("change", function () {
-      loadRoster(true);
-    });
-    yearSelect.addEventListener("change", function () {
-      loadRoster(true);
-    });
+    btnLoad.addEventListener("click", function () { loadRoster(false); });
+    btnGenerate.addEventListener("click", function () { generateRoster(false); });
+    monthSelect.addEventListener("change", function () { loadRoster(true); });
+    yearSelect.addEventListener("change", function () { loadRoster(true); });
 
-    // Auto-load on first paint and auto-generate if needed
-    loadRoster(true);
+    // Load shift types first (for cell colors), then load the roster
+    injectColumnHoverCSS();
+    attachColumnHover();
+    attachScrollFade();
+    loadShiftTypes().then(function () { loadRoster(true); });
   }
 
   document.addEventListener("DOMContentLoaded", function () {
