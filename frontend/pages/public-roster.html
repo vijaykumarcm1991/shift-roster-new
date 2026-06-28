@@ -119,10 +119,17 @@
             <!-- Grid summary line -->
             <div id="grid-summary" class="hidden items-center justify-between gap-3 border-b border-slate-200/70 px-5 py-3 text-sm dark:border-slate-800/70 sm:px-6">
               <span id="summary-text" class="text-slate-600 dark:text-slate-300">—</span>
-              <span id="summary-legend" class="hidden items-center gap-3 text-xs text-slate-500 sm:flex dark:text-slate-400">
-                <span class="inline-flex items-center gap-1"><span class="inline-block h-3 w-3 rounded bg-indigo-500"></span>today</span>
-                <span class="inline-flex items-center gap-1"><span class="inline-block h-3 w-3 rounded bg-slate-200 dark:bg-slate-700"></span>weekend</span>
-              </span>
+              <div class="flex items-center gap-3">
+                <span id="summary-legend" class="hidden items-center gap-3 text-xs text-slate-500 sm:flex dark:text-slate-400">
+                  <span class="inline-flex items-center gap-1"><span class="inline-block h-3 w-3 rounded bg-indigo-500"></span>today</span>
+                  <span class="inline-flex items-center gap-1"><span class="inline-block h-3 w-3 rounded bg-slate-200 dark:bg-slate-700"></span>weekend</span>
+                </span>
+                <button id="btn-expand" type="button" title="Expand to full page" aria-label="Expand grid to full page" class="expand-toggle inline-flex items-center gap-1.5 rounded-lg border border-slate-300 bg-white px-2.5 py-1 text-xs font-medium text-slate-700 transition hover:bg-slate-50 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700">
+                  <svg class="icon-expand h-3.5 w-3.5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 8V3h5M16 3h5v5M21 16v5h-5M8 21H3v-5"/></svg>
+                  <svg class="icon-compress hidden h-3.5 w-3.5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3v5H3M16 8h5V3M21 16h-5v5M3 16v5h5"/></svg>
+                  <span class="expand-label">Expand</span>
+                </button>
+              </div>
             </div>
 
             <!-- Spreadsheet grid -->

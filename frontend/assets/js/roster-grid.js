@@ -435,6 +435,10 @@
     wrapper.scrollLeft = Math.max(0, Math.min(target, max));
   }
 
+  // ---- Expand / compress the grid to full page ----
+  // Moved inside the factory closure (below) where it has access
+  // to scrollToToday() + scrollFade.
+
   // ---- Factory ----
 
   function create(opts) {
@@ -450,6 +454,7 @@
       yearSelect: document.getElementById("year-select"),
       btnLoad: document.getElementById("btn-load"),
       btnGenerate: document.getElementById("btn-generate"),
+      btnExpand: document.getElementById("btn-expand"),
       genIcon: document.getElementById("gen-icon"),
       genSpinner: document.getElementById("gen-spinner"),
       genText: document.getElementById("gen-text"),
@@ -468,6 +473,69 @@
       gridBody: document.getElementById("roster-grid-body"),
       toastContainer: document.getElementById("toast-container"),
     };
+    // The card is the .roster-card element — captured lazily so that
+    // callers can re-query it after the DOM is mutated (e.g., the
+    // public-roster.html page renders the same card but the user
+    // navigates back here from elsewhere).
+    function getCard() { return document.querySelector(".roster-card"); }
+
+    // ---- Expand / compress the grid to full page ----
+    // The expand button is a single toggle: clicking it adds the
+    // .roster-card--expanded class to the card (which the CSS
+    // positions fixed at the viewport edges) and the .roster-expanded
+    // class to <body> (which disables page scroll).  Clicking again
+    // removes both.  Pressing Escape also exits expanded mode.
+    function setExpanded(isExpanded) {
+      var card = getCard();
+      if (!card) return;
+      card.classList.toggle("roster-card--expanded", isExpanded);
+      document.body.classList.toggle("roster-expanded", isExpanded);
+      // Update the button label + icon to match the new state.
+      if (els.btnExpand) {
+        var iconExpand = els.btnExpand.querySelector(".icon-expand");
+        var iconCompress = els.btnExpand.querySelector(".icon-compress");
+        var label = els.btnExpand.querySelector(".expand-label");
+        if (iconExpand) iconExpand.classList.toggle("hidden", isExpanded);
+        if (iconCompress) iconCompress.classList.toggle("hidden", !isExpanded);
+        if (label) label.textContent = isExpanded ? "Compress" : "Expand";
+        els.btnExpand.setAttribute(
+          "title",
+          isExpanded ? "Compress (Esc)" : "Expand to full page"
+        );
+        els.btnExpand.setAttribute(
+          "aria-label",
+          isExpanded ? "Compress grid back to normal" : "Expand grid to full page"
+        );
+      }
+      // The grid wrapper's clientWidth changes when the card grows.
+      // Wait for the next paint so the layout is up to date, then
+      // re-centre today's column in the new viewport and refresh
+      // the scroll-fade indicator.  Without this the user has to
+      // scroll manually after expanding.
+      setTimeout(function () {
+        if (scrollFade && scrollFade.update) scrollFade.update();
+        if (lastData && lastData.meta) scrollToToday(lastData.meta);
+      }, 60);
+    }
+    function bindExpandHandler() {
+      if (!els.btnExpand) return;
+      if (els.btnExpand.dataset.expandBound === "1") return;
+      els.btnExpand.dataset.expandBound = "1";
+      els.btnExpand.addEventListener("click", function (e) {
+        e.stopPropagation();
+        var card = getCard();
+        if (!card) return;
+        setExpanded(!card.classList.contains("roster-card--expanded"));
+      });
+      // Escape key exits expanded mode from anywhere on the page.
+      document.addEventListener("keydown", function (e) {
+        if (e.key !== "Escape") return;
+        var card = getCard();
+        if (card && card.classList.contains("roster-card--expanded")) {
+          setExpanded(false);
+        }
+      });
+    }
 
     var headers = function (extra) {
       return Object.assign(
@@ -1163,6 +1231,7 @@
       injectColumnHoverCSS();
       attachColumnHover();
       scrollFade.attach();
+      bindExpandHandler();
       shiftCache.reload().then(function () { loadRoster(true); });
     }
 

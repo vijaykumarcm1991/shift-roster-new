@@ -570,3 +570,52 @@ body {
   font-style: italic;
 }
 
+
+/* =============================================================
+   Expand-to-full-page mode
+   ============================================================= */
+
+/* The expand button sits inside the grid legend (next to the
+   "today" / "weekend" swatches).  The tailwind classes on the
+   button cover the base look; the rules below just handle the
+   slight tweaks we want. */
+.expand-toggle {
+  cursor: pointer;
+  white-space: nowrap;
+}
+.expand-toggle:active {
+  transform: scale(0.97);
+}
+
+/* When the user clicks the expand button, the roster card grows
+   to fill the entire viewport.  We use position: fixed + inset: 0
+   so it covers everything underneath (sidebar, header, page
+   content).  Z-index 50 keeps it above the page chrome but below
+   the toast container (70) and the editing dropdown (60). */
+.roster-card--expanded {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  border-radius: 0;
+  border: none !important;
+  margin: 0 !important;
+  max-width: none !important;
+  box-shadow: none !important;
+  display: flex;
+  flex-direction: column;
+}
+.roster-card--expanded #grid-container {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+.roster-card--expanded .roster-grid-wrapper {
+  height: 100%;
+  min-height: 0;
+}
+
+/* When the card is full-page, the page background shouldn't be
+   visible — and the body shouldn't scroll behind it.  The class
+   is added/removed by roster-grid.js. */
+body.roster-expanded {
+  overflow: hidden;
+}
