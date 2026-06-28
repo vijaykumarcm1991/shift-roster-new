@@ -182,6 +182,184 @@ class RosterService:
         db.refresh(entry)
         return self._to_entry(entry)
 
+    # ---- mutation (Phase 8) ----
+
+    def update_entries_bulk(
+        self,
+        changes,  # List[RosterBulkItem]
+        db: Session,
+    ) -> dict:
+        """Apply many cell changes in one call.
+
+        Each item is processed independently.  Returns a dict with
+        per-item results plus summary counts:
+
+        ``{"results": [RosterBulkResultItem, ...], "updated_count": N,
+          "unchanged_count": M, "error_count": K}``
+
+        The endpoint returns 200 with this dict even when some items
+        failed — the per-item ``status`` / ``error`` fields tell the
+        frontend exactly what happened.  Only a top-level validation
+        error (bad payload, unauthenticated) produces a 4xx response.
+        """
+        from app.schemas.roster import RosterBulkResultItem  # local import
+
+        if self.shift_type_repository is None:
+            # Defensive — endpoints always pass a repo.  If someone
+            # calls this directly without one, fail loudly rather than
+            # silently accepting unknown shift codes.
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="shift_type_repository is not configured",
+            )
+
+        # Use Pydantic attribute access on the model instances so
+        # ``item.date`` is a ``datetime.date`` (not a string).  When
+        # ``item`` is a dict (e.g. for direct unit tests), normalise.
+        def _item_attr(it, key):
+            if isinstance(it, dict):
+                v = it[key]
+                if key == "date" and isinstance(v, str):
+                    return date.fromisoformat(v)
+                return v
+            return getattr(it, key)
+
+        def _item_date(it):
+            if isinstance(it, dict):
+                v = it["date"]
+                return v if isinstance(v, date) else date.fromisoformat(v)
+            return it.date
+
+        # ---- 1. Bulk-resolve shift codes up front ----
+        unique_codes: set = set()
+        for c in changes:
+            code = _item_attr(c, "shift_code")
+            if code:
+                unique_codes.add(code)
+        code_map = self.shift_type_repository.bulk_get_by_codes(
+            list(unique_codes)
+        )
+
+        # ---- 2. Bulk-fetch all affected rows in one query ----
+        pairs = [(_item_attr(c, "employee_id"), _item_date(c)) for c in changes]
+        rows_by_key = self.repository.bulk_get_by_employee_date(pairs)
+
+        # ---- 3. Process each change ----
+        results: list = []
+        updated_count = 0
+        unchanged_count = 0
+        error_count = 0
+
+        # Collect rows that actually changed so we can commit once at
+        # the end.  If any single change fails, we still commit the
+        # others (per the spec: "keep successful updates").
+        modified_rows: list = []
+
+        for item in changes:
+            emp_id = _item_attr(item, "employee_id")
+            d = _item_date(item)
+            key = (emp_id, d)
+            row = rows_by_key.get(key)
+            if row is None:
+                results.append(RosterBulkResultItem(
+                    employee_id=emp_id,
+                    date=d,
+                    status="error",
+                    error=(
+                        f"No roster row found for employee {emp_id} on "
+                        f"{d.isoformat()}. Generate the month first "
+                        f"before editing."
+                    ),
+                ))
+                error_count += 1
+                continue
+
+            shift_code = _item_attr(item, "shift_code")
+            if shift_code is None:
+                # Explicit null = clear the shift.
+                if row.shift_type_id is None:
+                    results.append(RosterBulkResultItem(
+                        employee_id=emp_id,
+                        date=d,
+                        status="unchanged",
+                        entry=self._to_entry(row),
+                    ))
+                    unchanged_count += 1
+                    continue
+                row.shift_type_id = None
+                modified_rows.append(row)
+                results.append(RosterBulkResultItem(
+                    employee_id=emp_id,
+                    date=d,
+                    status="updated",
+                    entry=None,  # filled in after commit+refresh below
+                ))
+                updated_count += 1
+                continue
+
+            # Non-null: resolve code → shift_type_id.
+            shift = code_map.get(shift_code.upper())
+            if shift is None:
+                # Spec: "Invalid values should not overwrite existing
+                # data." — we don't mutate the row, just return an error.
+                results.append(RosterBulkResultItem(
+                    employee_id=emp_id,
+                    date=d,
+                    status="error",
+                    error=(
+                        f"Unknown or inactive shift code: {shift_code!r}"
+                    ),
+                ))
+                error_count += 1
+                continue
+
+            if row.shift_type_id == shift.id:
+                results.append(RosterBulkResultItem(
+                    employee_id=emp_id,
+                    date=d,
+                    status="unchanged",
+                    entry=self._to_entry(row),
+                ))
+                unchanged_count += 1
+                continue
+
+            row.shift_type_id = shift.id
+            modified_rows.append(row)
+            results.append(RosterBulkResultItem(
+                employee_id=emp_id,
+                date=d,
+                status="updated",
+                entry=None,  # filled in after commit+refresh below
+            ))
+            updated_count += 1
+
+        # ---- 4. Commit successful changes once ----
+        if modified_rows:
+            db.commit()
+            for row in modified_rows:
+                db.refresh(row)
+
+        # ---- 5. Fill in `entry` for the updated items ----
+        # Map (emp_id, date) → updated Roster so we can look up the
+        # post-commit state for each result with status='updated'.
+        if modified_rows:
+            refreshed_keys = [(r.employee_id, r.roster_date) for r in modified_rows]
+            refreshed_by_key = self.repository.bulk_get_by_employee_date(
+                refreshed_keys
+            )
+            for r in results:
+                if r.status == "updated":
+                    r.entry = self._to_entry(
+                        refreshed_by_key.get((r.employee_id, r.date))
+                    )
+
+        return {
+            "results": results,
+            "updated_count": updated_count,
+            "unchanged_count": unchanged_count,
+            "error_count": error_count,
+        }
+
     # ---- helpers ----
 
     @staticmethod

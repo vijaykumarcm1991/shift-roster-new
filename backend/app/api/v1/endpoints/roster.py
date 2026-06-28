@@ -1,9 +1,11 @@
-"""``/api/roster`` endpoints (Phase 5 + Phase 7).
+"""``/api/roster`` endpoints (Phase 5 + Phase 7 + Phase 8).
 
 - ``GET  /api/roster/{year}/{month}``           — admin read of a month
 - ``POST /api/roster/{year}/{month}/generate``  — admin: idempotent generation
 - ``GET  /api/roster/{year}/{month}/public``    — public read of a month
 - ``PATCH /api/roster/entries/{entry_id}``      — admin: update a single cell
+- ``PATCH /api/roster/entries/bulk``            — admin: update many cells in
+                                                one call (Phase 8)
 
 The admin endpoints require a valid admin JWT. The public endpoint is
 used by the read-only roster viewer and is open to unauthenticated users.
@@ -21,7 +23,13 @@ from app.core.auth import require_admin
 from app.models.user import User
 from app.repositories.roster import RosterRepository
 from app.repositories.shift_type import ShiftTypeRepository
-from app.schemas.roster import RosterEntry, RosterEntryUpdate, RosterMonthResponse
+from app.schemas.roster import (
+    RosterBulkResult,
+    RosterBulkUpdate,
+    RosterEntry,
+    RosterEntryUpdate,
+    RosterMonthResponse,
+)
 from app.services.roster import RosterService
 
 router = APIRouter(prefix="/roster", tags=["roster"])
@@ -73,6 +81,40 @@ def generate_roster_month(
     _validate_year_month(year, month)
     service = RosterService(RosterRepository(db))
     return service.generate_month(year, month, db)
+
+
+@router.patch(
+    "/entries/bulk",
+    response_model=RosterBulkResult,
+)
+def update_roster_entries_bulk(
+    payload: RosterBulkUpdate,
+    db: Session = Depends(db_session),
+    current_user: User = Depends(require_admin),
+) -> RosterBulkResult:
+    """Apply many cell changes in one call (Phase 8 — copy/paste, bulk).
+
+    Each item is applied independently.  Unknown (employee_id, date)
+    pairs and unknown / inactive shift codes produce a per-item error;
+    the rest of the batch still goes through (the spec explicitly says
+    "keep successful updates" if part of the update fails).  Returns a
+    200 with the per-item results so the frontend can patch its
+    in-memory state and show a summary toast — successful cells get
+    the updated ``RosterEntry`` echoed back, failures get an error.
+
+    Capped at 3,100 items per call (100 employees × 31 days).
+
+    IMPORTANT: this route MUST be registered BEFORE
+    ``/entries/{entry_id}`` — FastAPI matches routes in registration
+    order, and ``bulk`` would otherwise be parsed as an integer
+    ``entry_id`` and fail with a 422.
+    """
+    service = RosterService(
+        RosterRepository(db),
+        ShiftTypeRepository(db),
+    )
+    result = service.update_entries_bulk(payload.changes, db)
+    return RosterBulkResult(**result)
 
 
 @router.patch(

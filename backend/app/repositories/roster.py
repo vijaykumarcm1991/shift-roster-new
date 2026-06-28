@@ -120,6 +120,64 @@ class RosterRepository:
         )
         return self.db.execute(stmt).unique().scalar_one_or_none()
 
+    def get_by_employee_date(
+        self, employee_id: int, roster_date: date
+    ) -> Optional[Roster]:
+        """Return the single roster row for (employee_id, date), or None.
+
+        Eager-loads employee + shift_type so the caller can serialize
+        the row in a single round-trip.
+        """
+        stmt = (
+            select(Roster)
+            .options(
+                joinedload(Roster.employee).joinedload(Employee.team),
+                joinedload(Roster.shift_type),
+            )
+            .where(
+                and_(
+                    Roster.employee_id == employee_id,
+                    Roster.roster_date == roster_date,
+                )
+            )
+        )
+        return self.db.execute(stmt).unique().scalar_one_or_none()
+
+    def bulk_get_by_employee_date(
+        self, pairs: List[Tuple[int, date]]
+    ) -> dict[Tuple[int, date], Roster]:
+        """Bulk fetch roster rows for a list of (employee_id, date) pairs.
+
+        Returns a dict keyed by the same pairs so the service can look up
+        each row in O(1).  Missing pairs are simply absent from the dict.
+        Eager-loads employee + shift_type for serialization.
+
+        The single-query approach is critical for Phase 8 performance: a
+        100-employee × 31-day paste = 3,100 cells would otherwise mean
+        3,100 round-trips.
+        """
+        if not pairs:
+            return {}
+        emp_ids = {eid for eid, _ in pairs}
+        dates = {d for _, d in pairs}
+        stmt = (
+            select(Roster)
+            .options(
+                joinedload(Roster.employee).joinedload(Employee.team),
+                joinedload(Roster.shift_type),
+            )
+            .where(
+                and_(
+                    Roster.employee_id.in_(emp_ids),
+                    Roster.roster_date.in_(dates),
+                )
+            )
+        )
+        result: dict[Tuple[int, date], Roster] = {}
+        for row in self.db.execute(stmt).unique().scalars().all():
+            result[(row.employee_id, row.roster_date)] = row
+        return result
+
     # ---- mutations ----
 
     def bulk_insert(self, entries: List[Roster]) -> int:
