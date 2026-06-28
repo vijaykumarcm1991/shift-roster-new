@@ -116,7 +116,19 @@ var ShiftRoster = (function () {
   }
 
   // ---- Boot (call from every page) ----
+  var booted = false;
+  var logoutIntervalId = null;
+
   function boot() {
+    // Idempotent: multiple page scripts (admin.js, roster.js, employees.js,
+    // public-roster.js) all call boot() as a safety net.  Without this guard
+    // the theme-toggle click handler ends up bound twice, which causes one
+    // click to flip dark → light → dark again in a single event and visually
+    // looks like "nothing happened" on the admin pages.  The auto-logout
+    // interval would also fire twice.
+    if (booted) return;
+    booted = true;
+
     initTheme();
     // If DOM is already ready, run setup immediately; otherwise wait for DOMContentLoaded
     if (document.readyState !== "loading") {
@@ -131,10 +143,12 @@ var ShiftRoster = (function () {
     watchSystemTheme();
     renderCurrentMonth();
     renderCurrentYear();
-    // Auto-logout timer
-    setInterval(function () {
-      if (getToken() && !isLoggedIn()) { removeToken(); window.location.href = "/login"; }
-    }, 60000);
+    // Auto-logout timer (only one interval, even if boot() is called twice)
+    if (logoutIntervalId === null) {
+      logoutIntervalId = setInterval(function () {
+        if (getToken() && !isLoggedIn()) { removeToken(); window.location.href = "/login"; }
+      }, 60000);
+    }
   }
 
   // Public API
