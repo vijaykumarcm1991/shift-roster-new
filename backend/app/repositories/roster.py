@@ -103,6 +103,23 @@ class RosterRepository:
             stmt = stmt.limit(limit)
         return list(self.db.execute(stmt).unique().scalars().all())
 
+    def get_by_id(self, entry_id: int) -> Optional[Roster]:
+        """Return a single roster entry by id, with eager-loaded relationships.
+
+        Returns ``None`` if the id does not exist.  The eager loading means
+        the caller can serialize the row (and its employee + shift_type)
+        without a second round-trip.
+        """
+        stmt = (
+            select(Roster)
+            .options(
+                joinedload(Roster.employee).joinedload(Employee.team),
+                joinedload(Roster.shift_type),
+            )
+            .where(Roster.id == entry_id)
+        )
+        return self.db.execute(stmt).unique().scalar_one_or_none()
+
     # ---- mutations ----
 
     def bulk_insert(self, entries: List[Roster]) -> int:

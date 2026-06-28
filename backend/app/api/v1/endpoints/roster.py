@@ -1,9 +1,12 @@
-"""``/api/roster`` endpoints (Phase 5).
+"""``/api/roster`` endpoints (Phase 5 + Phase 7).
 
-- ``GET  /api/roster/{year}/{month}``           — read a month's roster
-- ``POST /api/roster/{year}/{month}/generate``  — idempotent generation
+- ``GET  /api/roster/{year}/{month}``           — admin read of a month
+- ``POST /api/roster/{year}/{month}/generate``  — admin: idempotent generation
+- ``GET  /api/roster/{year}/{month}/public``    — public read of a month
+- ``PATCH /api/roster/entries/{entry_id}``      — admin: update a single cell
 
-Both endpoints require admin auth.
+The admin endpoints require a valid admin JWT. The public endpoint is
+used by the read-only roster viewer and is open to unauthenticated users.
 """
 
 from __future__ import annotations
@@ -17,7 +20,8 @@ from app.api.deps import db_session
 from app.core.auth import require_admin
 from app.models.user import User
 from app.repositories.roster import RosterRepository
-from app.schemas.roster import RosterMonthResponse
+from app.repositories.shift_type import ShiftTypeRepository
+from app.schemas.roster import RosterEntry, RosterEntryUpdate, RosterMonthResponse
 from app.services.roster import RosterService
 
 router = APIRouter(prefix="/roster", tags=["roster"])
@@ -38,6 +42,22 @@ def get_roster_month(
     return service.get_month(year, month, db, offset=offset, limit=limit)
 
 
+@router.get("/{year}/{month}/public", response_model=RosterMonthResponse)
+def get_roster_month_public(
+    year: int,
+    month: int,
+    db: Session = Depends(db_session),
+) -> RosterMonthResponse:
+    """Return the roster for a month without authentication.
+
+    Identical response to the admin endpoint but without ``require_admin``.
+    Used by the public read-only roster viewer.
+    """
+    _validate_year_month(year, month)
+    service = RosterService(RosterRepository(db))
+    return service.get_month(year, month, db)
+
+
 @router.post(
     "/{year}/{month}/generate",
     response_model=RosterMonthResponse,
@@ -53,6 +73,29 @@ def generate_roster_month(
     _validate_year_month(year, month)
     service = RosterService(RosterRepository(db))
     return service.generate_month(year, month, db)
+
+
+@router.patch(
+    "/entries/{entry_id}",
+    response_model=RosterEntry,
+)
+def update_roster_entry(
+    entry_id: int,
+    payload: RosterEntryUpdate,
+    db: Session = Depends(db_session),
+    current_user: User = Depends(require_admin),
+) -> RosterEntry:
+    """Update a single roster cell (shift and/or remarks).
+
+    Only the fields explicitly present in the request body are updated;
+    omitted fields keep their current value.  To clear a shift, send
+    ``{"shift_type_id": null}``.  Returns the updated entry.
+    """
+    service = RosterService(
+        RosterRepository(db),
+        ShiftTypeRepository(db),
+    )
+    return service.update_entry(entry_id, payload, db)
 
 
 def _validate_year_month(year: int, month: int) -> None:

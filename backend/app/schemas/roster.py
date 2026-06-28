@@ -1,4 +1,9 @@
-"""Pydantic schemas for roster read endpoints (Phase 5)."""
+"""Pydantic schemas for roster read + write endpoints (Phase 5 + Phase 7).
+
+- Phase 5: read schemas (``RosterEntry``, ``RosterMonthResponse``).
+- Phase 7: write schema (``RosterEntryUpdate``) used by
+  ``PATCH /api/roster/entries/{entry_id}`` to update a single cell.
+"""
 
 from datetime import date
 from typing import List, Optional
@@ -34,6 +39,32 @@ class RosterEntry(BaseModel):
     date: date
     shift: Optional[ShiftBrief] = None
     remarks: Optional[str] = None
+
+
+class RosterEntryUpdate(BaseModel):
+    """Body for ``PATCH /api/roster/entries/{entry_id}``.
+
+    Only the fields that are **explicitly set** in the request body are
+    updated — omitted fields keep their current value.  To clear a shift,
+    send ``{"shift_type_id": null}`` (explicit null).  Use the service
+    layer's ``model_dump(exclude_unset=True)`` to distinguish between
+    "field absent" and "field set to null".
+    """
+
+    shift_type_id: Optional[int] = Field(
+        default=None,
+        description=(
+            "ID of the new shift type, or null to clear the shift. "
+            "Omit the field entirely to leave the shift unchanged."
+        ),
+    )
+    remarks: Optional[str] = Field(
+        default=None,
+        description=(
+            "New remarks text, or null to clear. "
+            "Omit the field entirely to leave remarks unchanged."
+        ),
+    )
 
 
 class RosterMonthMeta(BaseModel):

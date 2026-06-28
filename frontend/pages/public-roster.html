@@ -1,0 +1,150 @@
+<!doctype html>
+<html lang="en" class="h-full">
+  <head>
+    <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>Roster — Shift Roster</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms"></script>
+    <script>tailwind.config={darkMode:"class",theme:{extend:{fontFamily:{sans:["Inter","ui-sans-serif","system-ui","-apple-system","Segoe UI","Roboto","Helvetica Neue","Arial","sans-serif"]},boxShadow:{soft:"0 10px 30px -10px rgb(15 23 42 / 0.15)","soft-dark":"0 10px 30px -10px rgb(0 0 0 / 0.5)"}}}};</script>
+    <link rel="preconnect" href="https://fonts.googleapis.com" /><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin /><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="/assets/css/styles.css" />
+  </head>
+  <body class="h-full font-sans antialiased bg-slate-50 text-slate-800 transition-colors duration-200 dark:bg-slate-950 dark:text-slate-100">
+    <div class="flex h-full flex-col">
+      <!-- Top header (public) -->
+      <header class="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-slate-200/70 bg-white/80 px-4 backdrop-blur dark:border-slate-800/70 dark:bg-slate-900/80 sm:px-6">
+        <div class="flex items-center gap-3">
+          <div class="grid h-9 w-9 place-items-center rounded-xl bg-gradient-to-br from-indigo-500 to-violet-600 text-white shadow-soft" aria-hidden="true">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-5 w-5"><rect x="3" y="4" width="18" height="18" rx="3"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+          </div>
+          <div class="leading-tight">
+            <h1 class="text-base font-semibold sm:text-lg">Shift Roster</h1>
+            <p id="current-month" class="text-xs text-slate-500 dark:text-slate-400">—</p>
+          </div>
+        </div>
+        <div class="flex items-center gap-2">
+          <button id="theme-toggle" type="button" aria-label="Toggle dark mode" class="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-500 transition hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-400 dark:hover:bg-slate-700">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-4 w-4 hidden dark:block"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-4 w-4 dark:hidden"><path d="M21 12.79A9 9 0 1 1 11.21 3a7 7 0 0 0 9.79 9.79z"/></svg>
+          </button>
+          <a href="/" class="hidden items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-600 transition hover:bg-slate-50 sm:inline-flex dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-4 w-4"><path d="M3 12l9-9 9 9"/><path d="M5 10v10h14V10"/></svg>
+            Home
+          </a>
+          <a href="/login" class="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-4 py-2 text-sm font-medium text-white shadow-soft transition hover:bg-slate-800 dark:bg-indigo-500 dark:hover:bg-indigo-400">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-4 w-4"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+            Admin Login
+          </a>
+        </div>
+      </header>
+
+      <!-- Content -->
+      <main class="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
+        <div class="mx-auto max-w-6xl">
+          <!-- Card -->
+          <div class="roster-card rounded-2xl border border-slate-200/70 bg-white shadow-soft dark:border-slate-800/70 dark:bg-slate-900">
+            <!-- Card header + month/year selectors -->
+            <div class="flex flex-col gap-4 border-b border-slate-200/70 p-5 dark:border-slate-800/70 sm:flex-row sm:items-center sm:justify-between sm:p-6">
+              <div>
+                <h3 class="text-lg font-semibold text-slate-900 dark:text-white">Monthly Roster</h3>
+                <p class="mt-0.5 text-xs text-slate-500 dark:text-slate-400">Read-only view of the shift schedule</p>
+              </div>
+              <div class="flex flex-wrap items-center gap-2">
+                <select id="month-select" class="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm transition focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100">
+                  <option value="1">January</option><option value="2">February</option><option value="3">March</option><option value="4">April</option><option value="5">May</option><option value="6">June</option><option value="7">July</option><option value="8">August</option><option value="9">September</option><option value="10">October</option><option value="11">November</option><option value="12">December</option>
+                </select>
+                <select id="year-select" class="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm transition focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100">
+                  <option value="2024">2024</option><option value="2025">2025</option><option value="2026">2026</option><option value="2027">2027</option>
+                </select>
+                <!-- No Generate / Load buttons on the public page -->
+                <button id="btn-load" type="button" class="hidden" aria-hidden="true"></button>
+                <button id="btn-generate" type="button" class="hidden" aria-hidden="true"></button>
+                <span id="gen-icon" class="hidden"></span>
+                <span id="gen-spinner" class="hidden"></span>
+                <span id="gen-text" class="hidden"></span>
+              </div>
+            </div>
+
+            <!-- Stats row -->
+            <div class="grid grid-cols-2 gap-3 border-b border-slate-200/70 p-5 dark:border-slate-800/70 sm:grid-cols-4 sm:p-6">
+              <div class="rounded-xl border border-slate-200/70 bg-slate-50 p-3 dark:border-slate-800/70 dark:bg-slate-800/40">
+                <p class="text-[10px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Selected Month</p>
+                <p id="stat-month" class="mt-1 text-lg font-semibold text-slate-900 dark:text-white">—</p>
+              </div>
+              <div class="rounded-xl border border-slate-200/70 bg-slate-50 p-3 dark:border-slate-800/70 dark:bg-slate-800/40">
+                <p class="text-[10px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Number of Employees</p>
+                <p id="stat-employees" class="mt-1 text-lg font-semibold text-slate-900 dark:text-white">—</p>
+              </div>
+              <div class="rounded-xl border border-slate-200/70 bg-slate-50 p-3 dark:border-slate-800/70 dark:bg-slate-800/40">
+                <p class="text-[10px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Number of Days</p>
+                <p id="stat-days" class="mt-1 text-lg font-semibold text-slate-900 dark:text-white">—</p>
+              </div>
+              <div class="rounded-xl border border-slate-200/70 bg-slate-50 p-3 dark:border-slate-800/70 dark:bg-slate-800/40">
+                <p class="text-[10px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Total Cells</p>
+                <p id="stat-cells" class="mt-1 text-lg font-semibold text-slate-900 dark:text-white">—</p>
+              </div>
+            </div>
+
+            <!-- Status message -->
+            <div id="status-row" class="flex items-center gap-2 border-b border-slate-200/70 px-5 py-3 text-sm dark:border-slate-800/70 sm:px-6">
+              <span id="status-dot" class="inline-block h-2 w-2 rounded-full bg-slate-300 dark:bg-slate-600"></span>
+              <span id="status-text" class="text-slate-500 dark:text-slate-400">Loading…</span>
+            </div>
+
+            <!-- Loading state -->
+            <div id="loading-state" class="hidden py-12 text-center">
+              <div class="inline-flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400">
+                <svg class="h-5 w-5 animate-spin" viewBox="0 0 24 24" fill="none"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
+                Loading roster…
+              </div>
+            </div>
+
+            <!-- No active employees state -->
+            <div id="no-employees-state" class="hidden py-16 text-center">
+              <div class="mx-auto mb-4 grid h-14 w-14 place-items-center rounded-2xl bg-slate-100 text-slate-400 dark:bg-slate-800 dark:text-slate-500">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="h-7 w-7"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+              </div>
+              <p class="text-sm font-medium text-slate-600 dark:text-slate-300">No Active Employees</p>
+              <p class="mt-1 text-xs text-slate-400 dark:text-slate-500">There are no employees to show on the roster yet.</p>
+            </div>
+
+            <!-- Empty-state for the public page (different copy) -->
+            <div id="not-generated-state" class="hidden py-16 text-center">
+              <div class="mx-auto mb-4 grid h-14 w-14 place-items-center rounded-2xl bg-amber-50 text-amber-500 dark:bg-amber-500/10 dark:text-amber-300">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="h-7 w-7"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+              </div>
+              <p class="text-sm font-medium text-slate-600 dark:text-slate-300">Roster not generated yet</p>
+              <p class="mt-1 text-xs text-slate-400 dark:text-slate-500">An administrator needs to generate the roster for this month.</p>
+            </div>
+
+            <!-- Grid summary line -->
+            <div id="grid-summary" class="hidden items-center justify-between gap-3 border-b border-slate-200/70 px-5 py-3 text-sm dark:border-slate-800/70 sm:px-6">
+              <span id="summary-text" class="text-slate-600 dark:text-slate-300">—</span>
+              <span id="summary-legend" class="hidden items-center gap-3 text-xs text-slate-500 sm:flex dark:text-slate-400">
+                <span class="inline-flex items-center gap-1"><span class="inline-block h-3 w-3 rounded bg-indigo-500"></span>today</span>
+                <span class="inline-flex items-center gap-1"><span class="inline-block h-3 w-3 rounded bg-slate-200 dark:bg-slate-700"></span>weekend</span>
+              </span>
+            </div>
+
+            <!-- Spreadsheet grid -->
+            <div id="grid-container" class="hidden p-3 sm:p-4">
+              <div class="roster-grid-wrapper" id="roster-grid-wrapper">
+                <table id="roster-grid" class="roster-grid">
+                  <thead id="roster-grid-head"></thead>
+                  <tbody id="roster-grid-body"></tbody>
+                </table>
+                <div class="scroll-fade" aria-hidden="true"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+
+    <!-- ===== TOAST CONTAINER ===== -->
+    <div id="toast-container" class="fixed bottom-5 right-5 z-[70] flex flex-col gap-2"></div>
+
+    <script src="/assets/js/app.js" defer></script>
+    <script src="/assets/js/roster-grid.js" defer></script>
+    <script src="/assets/js/public-roster.js" defer></script>
+  </body>
+</html>

@@ -403,3 +403,170 @@ body {
     transparent 0.5px
   );
 }
+
+/* =============================================================
+   Phase 7 — Cell editing visuals
+   ============================================================= */
+
+/* ---- Active row (mouse / cell clicked) ----
+   A subtle band that follows the row of the currently-active cell.
+   Higher specificity than ``tr:hover`` so it wins on the active row. */
+.roster-grid tbody tr.active-row > th,
+.roster-grid tbody tr.active-row > td {
+  background-color: rgb(241 245 249 / 0.7) !important;
+}
+.dark .roster-grid tbody tr.active-row > th,
+.dark .roster-grid tbody tr.active-row > td {
+  background-color: rgb(30 41 59 / 0.5) !important;
+}
+
+/* ---- Active column (cell clicked) ----
+   Both light and dark mode ``.active-col-N`` rules are injected at
+   runtime by ``injectColumnHoverCSS`` in roster-grid.js, after the
+   col-hover rules, so the active column always wins over column
+   hover when both apply (e.g., the user just clicked and the mouse
+   is still on the column).  See roster-grid.js. */
+
+/* ---- Active cell (the cell currently being clicked/edited) ---- */
+.roster-grid td.day-cell.editing {
+  box-shadow: inset 0 0 0 2px rgb(99 102 241 / 1) !important;
+  background: white !important;
+}
+.dark .roster-grid td.day-cell.editing {
+  background: rgb(15 23 42 / 1) !important;
+  box-shadow: inset 0 0 0 2px rgb(129 140 248 / 1) !important;
+}
+
+/* ---- Cell currently saving (PATCH in flight) ---- */
+.roster-grid td.day-cell.saving {
+  opacity: 0.65;
+  pointer-events: none;
+}
+
+/* ---- Validation error flash (typed unknown code) ---- */
+.roster-grid td.day-cell .editing-input.validation-error {
+  background-color: rgb(254 226 226 / 1);
+  box-shadow: inset 0 0 0 1px rgb(248 113 113 / 1);
+  animation: shake 320ms ease-in-out;
+}
+.dark .roster-grid td.day-cell .editing-input.validation-error {
+  background-color: rgb(127 29 29 / 0.4);
+  box-shadow: inset 0 0 0 1px rgb(248 113 113 / 1);
+}
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  25%      { transform: translateX(-3px); }
+  75%      { transform: translateX(3px); }
+}
+
+/* ---- The text input that replaces a cell while editing ---- */
+.roster-grid td.day-cell .editing-input {
+  width: 100%;
+  height: 100%;
+  border: 0;
+  outline: 0;
+  padding: 0 4px;
+  text-align: center;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: rgb(15 23 42 / 1);
+  background: transparent;
+  border-radius: 0;
+  text-transform: uppercase;
+  letter-spacing: 0.025em;
+}
+.dark .roster-grid td.day-cell .editing-input {
+  color: rgb(226 232 240 / 1);
+}
+.roster-grid td.day-cell .editing-input::placeholder {
+  color: rgb(148 163 184 / 0.6);
+  font-weight: 500;
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+/* ---- Dropdown / autocomplete ----
+   The dropdown is positioned: fixed so it floats over the card without
+   being clipped by the card's overflow. It is appended to <body> from JS. */
+.editing-dropdown {
+  position: fixed;
+  z-index: 60;
+  background: white;
+  border: 1px solid rgb(226 232 240 / 1);
+  border-radius: 0.75rem;
+  box-shadow:
+    0 20px 25px -5px rgb(15 23 42 / 0.10),
+    0 8px 10px -6px rgb(15 23 42 / 0.10);
+  max-height: 260px;
+  overflow-y: auto;
+  padding: 4px;
+  min-width: 200px;
+}
+.dark .editing-dropdown {
+  background: rgb(30 41 59 / 1);
+  border-color: rgb(51 65 85 / 1);
+  box-shadow:
+    0 20px 25px -5px rgb(0 0 0 / 0.4),
+    0 8px 10px -6px rgb(0 0 0 / 0.4);
+}
+.editing-dropdown .editing-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.editing-dropdown .editing-item {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  padding: 0.5rem 0.625rem;
+  border-radius: 0.5rem;
+  cursor: pointer;
+  font-size: 0.8125rem;
+  color: rgb(15 23 42 / 1);
+  transition: background-color 80ms;
+}
+.dark .editing-dropdown .editing-item {
+  color: rgb(226 232 240 / 1);
+}
+.editing-dropdown .editing-item:hover,
+.editing-dropdown .editing-item.selected {
+  background: rgb(238 242 255 / 1);
+}
+.dark .editing-dropdown .editing-item:hover,
+.dark .editing-dropdown .editing-item.selected {
+  background: rgb(30 27 75 / 0.5);
+}
+.editing-dropdown .editing-item-swatch {
+  display: inline-block;
+  height: 14px;
+  width: 14px;
+  border-radius: 4px;
+  flex-shrink: 0;
+  box-shadow: inset 0 0 0 1px rgb(0 0 0 / 0.08);
+}
+.editing-dropdown .editing-item-code {
+  font-weight: 700;
+  font-size: 0.75rem;
+  color: rgb(67 56 202 / 1);
+}
+.dark .editing-dropdown .editing-item-code {
+  color: rgb(199 210 254 / 1);
+}
+.editing-dropdown .editing-item-name {
+  color: rgb(100 116 139 / 1);
+  font-size: 0.75rem;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.dark .editing-dropdown .editing-item-name {
+  color: rgb(148 163 184 / 1);
+}
+.editing-dropdown .editing-empty {
+  padding: 0.625rem 0.75rem;
+  font-size: 0.75rem;
+  color: rgb(148 163 184 / 1);
+  font-style: italic;
+}
+

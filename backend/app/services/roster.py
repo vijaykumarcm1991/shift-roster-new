@@ -1,23 +1,28 @@
-"""Service for the Roster domain (Phase 5).
+"""Service for the Roster domain (Phase 5 + Phase 7).
 
-Handles monthly roster generation and read queries. Generation is
-idempotent: re-running it for an already-generated month is a no-op
-(returns the existing data). All date logic uses naive ``date`` objects
-— ``roster_date`` is a calendar date, not an instant in time.
+Handles monthly roster generation, read queries, and (Phase 7) single-cell
+updates. Generation is idempotent: re-running it for an already-generated
+month is a no-op (returns the existing data). All date logic uses naive
+``date`` objects — ``roster_date`` is a calendar date, not an instant in
+time.
 """
 
 from __future__ import annotations
 
 from datetime import date
-from typing import List
+from typing import List, Optional
 
+from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.models.roster import Roster
+from app.models.shift_type import ShiftType
 from app.repositories.roster import RosterRepository
+from app.repositories.shift_type import ShiftTypeRepository
 from app.schemas.roster import (
     EmployeeBrief,
     RosterEntry,
+    RosterEntryUpdate,
     RosterMonthMeta,
     RosterMonthResponse,
     ShiftBrief,
@@ -33,8 +38,16 @@ MONTH_NAMES = [
 class RosterService:
     """High-level operations on the monthly roster."""
 
-    def __init__(self, repository: RosterRepository) -> None:
+    def __init__(
+        self,
+        repository: RosterRepository,
+        shift_type_repository: Optional[ShiftTypeRepository] = None,
+    ) -> None:
         self.repository = repository
+        # The shift-type repo is needed for validation in ``update_entry``.
+        # It is optional so that existing callers that only use the read
+        # path can keep the old single-argument constructor.
+        self.shift_type_repository = shift_type_repository
 
     # ---- read ----
 
@@ -110,6 +123,64 @@ class RosterService:
             db.commit()
 
         return self.get_month(year, month, db)
+
+    # ---- mutation (Phase 7) ----
+
+    def update_entry(
+        self,
+        entry_id: int,
+        data: RosterEntryUpdate,
+        db: Session,
+    ) -> RosterEntry:
+        """Update a single roster entry. Returns the updated entry.
+
+        Behavior:
+        - Fields **omitted** from the request body are left unchanged.
+        - Fields set to ``None`` (explicit null) clear the field.
+        - ``shift_type_id`` is validated against the shift_types table:
+          if a non-null value is provided, the id must exist and be active.
+        - Raises ``HTTPException(404)`` if the entry does not exist.
+        - Raises ``HTTPException(400)`` if the shift id is invalid.
+        """
+        entry = self.repository.get_by_id(entry_id)
+        if entry is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Roster entry {entry_id} not found",
+            )
+
+        # ``exclude_unset`` distinguishes "field not in request" (keep
+        # current value) from "field explicitly set to None" (clear it).
+        updates = data.model_dump(exclude_unset=True)
+
+        if "shift_type_id" in updates:
+            new_id = updates["shift_type_id"]
+            if new_id is not None:
+                # Validate the shift type exists and is active.
+                if self.shift_type_repository is None:
+                    # Defensive — should not happen in production because
+                    # the endpoint always passes one, but raise clearly
+                    # if it does so we never silently accept bad input.
+                    raise HTTPException(
+                        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                        detail="shift_type_repository is not configured",
+                    )
+                shift_type: Optional[ShiftType] = (
+                    self.shift_type_repository.get_by_id(new_id)
+                )
+                if shift_type is None or not shift_type.is_active:
+                    raise HTTPException(
+                        status_code=status.HTTP_400_BAD_REQUEST,
+                        detail=f"Invalid shift_type_id: {new_id}",
+                    )
+            entry.shift_type_id = new_id
+
+        if "remarks" in updates:
+            entry.remarks = updates["remarks"]
+
+        db.commit()
+        db.refresh(entry)
+        return self._to_entry(entry)
 
     # ---- helpers ----
 
