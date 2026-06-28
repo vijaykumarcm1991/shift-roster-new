@@ -234,6 +234,19 @@ class TestSeedData:
         )
         assert len(colors) == len(set(colors)), f"Duplicate colors found: {colors}"
 
+    def test_gh_display_name_is_govt_holiday(self):
+        """GH is Government Holiday (not Gas Holiday).
+
+        Regression guard: the seed used to say "Gas Holiday"
+        which was wrong.  This test ensures the DEFAULT_SHIFT_TYPES
+        tuple for code 'GH' has the correct display_name so it can
+        never silently regress to "Gas Holiday".
+        """
+        gh = next(s for s in DEFAULT_SHIFT_TYPES if s[0] == "GH")
+        assert gh[1] == "Govt Holiday", (
+            f"GH display_name is {gh[1]!r}, expected 'Govt Holiday'"
+        )
+
 
 # -----------------------------------------------------------------------
 # AC-5: API — GET /api/shift-types returns all seeded shift types

@@ -29,7 +29,7 @@ DEFAULT_SHIFT_TYPES: List[tuple[str, str, str, int]] = [
     ("WO", "Week Off",    "gray",    50),
     ("CO", "Comp Off",    "orange",  60),
     ("L",  "Leave",       "red",     70),
-    ("GH", "Gas Holiday", "yellow",  80),
+    ("GH", "Govt Holiday", "yellow",  80),
 ]
 
 # Default admin account
